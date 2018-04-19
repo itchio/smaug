@@ -20,8 +20,8 @@ type firejailRunner struct {
 var _ Runner = (*firejailRunner)(nil)
 
 func newFirejailRunner(params *RunnerParams) (Runner, error) {
-	if params.FirejailSettings == nil {
-		return nil, errors.Errorf("FirejailSettings must be set")
+	if params.FirejailParams.BinaryPath == nil {
+		return nil, errors.Errorf("FirejailParams.BinaryPath must be set")
 	}
 
 	fr := &firejailRunner{
@@ -40,7 +40,7 @@ func (fr *firejailRunner) Run() error {
 	params := fr.params
 	consumer := params.Consumer
 
-	firejailPath := params.FirejailSettings.FirejailBinary
+	firejailPath := params.FirejailParams.BinaryPath
 
 	sandboxProfilePath := filepath.Join(params.InstallFolder, ".itch", "isolate-app.profile")
 	consumer.Opf("Writing sandbox profile to (%s)", sandboxProfilePath)
