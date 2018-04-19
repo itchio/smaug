@@ -20,7 +20,7 @@ type firejailRunner struct {
 var _ Runner = (*firejailRunner)(nil)
 
 func newFirejailRunner(params *RunnerParams) (Runner, error) {
-	if params.FirejailParams.BinaryPath == nil {
+	if params.FirejailParams.BinaryPath == "" {
 		return nil, errors.Errorf("FirejailParams.BinaryPath must be set")
 	}
 
