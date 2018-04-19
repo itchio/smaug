@@ -41,7 +41,8 @@ type FirejailParams struct {
 }
 
 type FujiParams struct {
-	Instance fuji.Instance
+	Instance             fuji.Instance
+	PerformElevatedSetup func() error
 }
 
 type AttachParams struct {
