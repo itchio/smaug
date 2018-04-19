@@ -15,3 +15,10 @@ test:darwin:
     - darwin
   script:
     - scripts/ci.sh
+
+test:linux:
+  stage: test
+  tags:
+    - linux
+  script:
+    - scripts/ci.sh
