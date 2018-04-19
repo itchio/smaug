@@ -12,7 +12,7 @@ type Credentials struct {
 	Password string
 }
 
-func (i *instance) getCredentials() (*Credentials, error) {
+func (i *instance) GetCredentials() (*Credentials, error) {
 	username, err := getRegistryString(i.settings, "username")
 	if err != nil {
 		return nil, errors.WithStack(err)

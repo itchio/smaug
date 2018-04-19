@@ -96,7 +96,7 @@ type CheckAccessParams struct {
 }
 
 func (i *instance) CheckAccess(consumer *state.Consumer, params *CheckAccessParams) error {
-	creds, err := i.getCredentials()
+	creds, err := i.GetCredentials()
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -23,7 +23,7 @@ func Test_Credentials(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	creds, err := i.getCredentials()
+	creds, err := i.GetCredentials()
 	assert.NoError(t, err)
 	assert.EqualValues(t, "gecko", creds.Username)
 	assert.EqualValues(t, "jesus", creds.Password)

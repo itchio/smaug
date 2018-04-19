@@ -13,7 +13,7 @@ import (
 
 func (i *instance) Check(consumer *state.Consumer) error {
 	consumer.Opf("Retrieving player data from registry...")
-	creds, err := i.getCredentials()
+	creds, err := i.GetCredentials()
 	if err != nil {
 		return errors.WithStack(err)
 	}

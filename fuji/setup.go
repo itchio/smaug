@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itchio/butler/comm"
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/wharf/state"
 	"github.com/pkg/errors"
@@ -36,33 +35,33 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 	var username string
 	var password string
 
-	existingCreds, err := i.getCredentials()
+	existingCreds, err := i.GetCredentials()
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	username = existingCreds.Username
 	if username != "" {
-		comm.Opf("Trying to salvage existing account (%s)....", username)
+		consumer.Opf("Trying to salvage existing account (%s)....", username)
 		password = generatePassword()
 		err = winox.ForceSetPassword(username, password)
 		if err != nil {
 			consumer.Warnf("Could not force password: %+v", err)
 			username = ""
 		} else {
-			comm.Statf("Forced password successfully")
+			consumer.Statf("Forced password successfully")
 		}
 	}
 
 	if username == "" {
 		username = fmt.Sprintf("itch-player-%x", time.Now().Unix())
-		comm.Opf("Generated username (%s)", username)
+		consumer.Opf("Generated username (%s)", username)
 
 		password = generatePassword()
-		comm.Opf("Generated password (%s)", password)
+		consumer.Opf("Generated password (%s)", password)
 
 		comment := "itch.io sandbox user"
 
-		comm.Opf("Adding user...")
+		consumer.Opf("Adding user...")
 
 		err = winox.AddUser(username, password, comment)
 		if err != nil {
@@ -70,21 +69,21 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 		}
 	}
 
-	comm.Opf("Removing from Users group (so it doesn't show up as a login option)...")
+	consumer.Opf("Removing from Users group (so it doesn't show up as a login option)...")
 
 	err = winox.RemoveUserFromUsersGroup(username)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	comm.Opf("Loading profile for the first time (to create some directories)...")
+	consumer.Opf("Loading profile for the first time (to create some directories)...")
 
 	err = winox.LoadProfileOnce(username, ".", password)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 
-	comm.Opf("Saving to credentials registry...")
+	consumer.Opf("Saving to credentials registry...")
 
 	creds := &Credentials{
 		Username: username,
@@ -95,7 +94,7 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 		return errors.WithStack(err)
 	}
 
-	comm.Statf("All done! (in %s)", time.Since(startTime))
+	consumer.Statf("All done! (in %s)", time.Since(startTime))
 
 	return nil
 }

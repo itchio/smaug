@@ -5,6 +5,7 @@ package fuji
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,7 +25,7 @@ func randomCharFromSet(prng *rand.Rand, set string) string {
 
 func generatePassword() string {
 	pwd := ""
-	prng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	prng := getPrng()
 
 	for i := 0; i < 16; i++ {
 		var token string
@@ -41,4 +42,14 @@ func generatePassword() string {
 		pwd += token
 	}
 	return pwd
+}
+
+var _prng *rand.Rand
+var _initPrngOnce sync.Once
+
+func getPrng() *rand.Rand {
+	_initPrngOnce.Do(func() {
+		_prng = rand.New(rand.NewSource(time.Now().UnixNano()))
+	})
+	return _prng
 }

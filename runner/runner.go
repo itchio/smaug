@@ -7,7 +7,6 @@ import (
 	"runtime"
 
 	"github.com/itchio/butler/manager"
-	"github.com/itchio/smaug/firejail"
 	"github.com/itchio/smaug/fuji"
 	"github.com/itchio/wharf/state"
 )
@@ -30,8 +29,23 @@ type RunnerParams struct {
 	InstallFolder string
 	Runtime       *manager.Runtime
 
-	FujiSettings     *fuji.Settings
-	FirejailSettings *firejail.Settings
+	// runner-specific params
+
+	FirejailParams FirejailParams
+	FujiParams     FujiParams
+	AttachParams   AttachParams
+}
+
+type FirejailParams struct {
+	BinaryPath string
+}
+
+type FujiParams struct {
+	Instance fuji.Instance
+}
+
+type AttachParams struct {
+	BringWindowToForeground func(hwnd int64)
 }
 
 type Runner interface {
@@ -47,7 +61,7 @@ func GetRunner(params *RunnerParams) (Runner, error) {
 		return attachRunner, nil
 	}
 	if err != nil {
-		consumer.Warnf("Could not determine if app is aslready running: %s", err.Error())
+		consumer.Warnf("Could not determine if app is already running: %s", err.Error())
 	}
 
 	switch runtime.GOOS {

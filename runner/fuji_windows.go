@@ -7,29 +7,26 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/itchio/butler/butlerd/messages"
-
-	"github.com/itchio/butler/installer"
-
-	"github.com/itchio/butler/butlerd"
-	"github.com/itchio/butler/cmd/elevate"
-
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/ox/winox/execas"
+	"github.com/itchio/smaug/fuji"
 	"github.com/itchio/wharf/state"
 	"github.com/pkg/errors"
 )
 
 type fujiRunner struct {
-	params *RunnerParams
-
+	params      *RunnerParams
 	Credentials *fuji.Credentials
 }
 
 var _ Runner = (*fujiRunner)(nil)
 
 func newFujiRunner(params *RunnerParams) (Runner, error) {
+	if params.FujiParams.Instance == nil {
+		return nil, errors.Errorf("FujiParams.Instance should be set")
+	}
+
 	wr := &fujiRunner{
 		params: params,
 	}
@@ -38,53 +35,26 @@ func newFujiRunner(params *RunnerParams) (Runner, error) {
 
 func (wr *fujiRunner) Prepare() error {
 	consumer := wr.params.Consumer
+	fi := wr.params.FujiParams.Instance
 
 	nullConsumer := &state.Consumer{}
-	err := fuji.Check(nullConsumer)
+	err := fi.Check(nullConsumer)
 	if err != nil {
 		consumer.Warnf("Sandbox check failed: %s", err.Error())
 
-		r, err := messages.AllowSandboxSetup.Call(wr.params.RequestContext, &butlerd.AllowSandboxSetupParams{})
+		err := fi.Settings().PerformElevatedSetup()
 		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		if !r.Allow {
-			return errors.WithStack(butlerd.CodeOperationAborted)
-		}
-		consumer.Infof("Proceeding with sandbox setup...")
-
-		res, err := installer.RunSelf(&installer.RunSelfParams{
-			Consumer: consumer,
-			Args: []string{
-				"--elevate",
-				"fuji",
-				"setup",
-			},
-		})
-		if err != nil {
-			return errors.WithStack(err)
-		}
-
-		if res.ExitCode != 0 {
-			if res.ExitCode == elevate.ExitCodeAccessDenied {
-				return errors.WithStack(butlerd.CodeOperationAborted)
-			}
-		}
-
-		err = installer.CheckExitCode(res.ExitCode, err)
-		if err != nil {
-			return errors.WithStack(err)
+			return err
 		}
 
 		consumer.Infof("Sandbox setup done, checking again...")
-		err = fuji.Check(nullConsumer)
+		err = fi.Check(nullConsumer)
 		if err != nil {
 			return errors.WithStack(err)
 		}
 	}
 
-	Credentials, err := fuji.GetCredentials()
+	Credentials, err := fi.GetCredentials()
 	if err != nil {
 		return errors.WithStack(err)
 	}
