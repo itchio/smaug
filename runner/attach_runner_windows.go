@@ -16,7 +16,7 @@ import (
 )
 
 func getAttachRunner(params *RunnerParams) (Runner, error) {
-	consumer := params.RequestContext.Consumer
+	consumer := params.Consumer
 
 	snapshot, err := syscallex.CreateToolhelp32Snapshot(
 		syscallex.TH32CS_SNAPPROCESS,
@@ -133,7 +133,7 @@ func (ar *attachRunner) Prepare() error {
 }
 
 func (ar *attachRunner) Run() error {
-	consumer := ar.params.RequestContext.Consumer
+	consumer := ar.params.Consumer
 
 	cancel := make(chan struct{})
 	defer close(cancel)

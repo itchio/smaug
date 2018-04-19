@@ -37,7 +37,7 @@ func newFujiRunner(params *RunnerParams) (Runner, error) {
 }
 
 func (wr *fujiRunner) Prepare() error {
-	consumer := wr.params.RequestContext.Consumer
+	consumer := wr.params.Consumer
 
 	nullConsumer := &state.Consumer{}
 	err := fuji.Check(nullConsumer)
@@ -98,7 +98,7 @@ func (wr *fujiRunner) Prepare() error {
 func (wr *fujiRunner) Run() error {
 	var err error
 	params := wr.params
-	consumer := params.RequestContext.Consumer
+	consumer := params.Consumer
 	pd := wr.Credentials
 
 	consumer.Infof("Running as user (%s)", pd.Username)
@@ -163,7 +163,7 @@ func (wr *fujiRunner) Run() error {
 func (wr *fujiRunner) getSharingPolicy() (*winox.SharingPolicy, error) {
 	params := wr.params
 	pd := wr.Credentials
-	consumer := params.RequestContext.Consumer
+	consumer := params.Consumer
 
 	sp := &winox.SharingPolicy{
 		Trustee: pd.Username,

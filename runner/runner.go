@@ -6,13 +6,15 @@ import (
 	"io"
 	"runtime"
 
-	"github.com/itchio/butler/butlerd"
 	"github.com/itchio/butler/manager"
+	"github.com/itchio/smaug/firejail"
+	"github.com/itchio/smaug/fuji"
+	"github.com/itchio/wharf/state"
 )
 
 type RunnerParams struct {
-	RequestContext *butlerd.RequestContext
-	Ctx            context.Context
+	Consumer *state.Consumer
+	Ctx      context.Context
 
 	Sandbox bool
 
@@ -25,10 +27,11 @@ type RunnerParams struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	PrereqsDir    string
-	Credentials   *butlerd.GameCredentials
 	InstallFolder string
 	Runtime       *manager.Runtime
+
+	FujiSettings     *fuji.Settings
+	FirejailSettings *firejail.Settings
 }
 
 type Runner interface {
@@ -37,7 +40,7 @@ type Runner interface {
 }
 
 func GetRunner(params *RunnerParams) (Runner, error) {
-	consumer := params.RequestContext.Consumer
+	consumer := params.Consumer
 
 	attachRunner, err := getAttachRunner(params)
 	if attachRunner != nil {
@@ -50,7 +53,7 @@ func GetRunner(params *RunnerParams) (Runner, error) {
 	switch runtime.GOOS {
 	case "windows":
 		if params.Sandbox {
-			return newWinSandboxRunner(params)
+			return newFujiRunner(params)
 		}
 		return newSimpleRunner(params)
 	case "linux":

@@ -28,7 +28,7 @@ func (sr *simpleRunner) Prepare() error {
 
 func (sr *simpleRunner) Run() error {
 	params := sr.params
-	consumer := params.RequestContext.Consumer
+	consumer := params.Consumer
 
 	cmd := execas.Command(params.FullTargetPath, params.Args...)
 	cmd.Dir = params.Dir
