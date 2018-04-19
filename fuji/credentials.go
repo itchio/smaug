@@ -7,11 +7,6 @@ import (
 	"golang.org/x/sys/windows/registry"
 )
 
-type Credentials struct {
-	Username string
-	Password string
-}
-
 func (i *instance) GetCredentials() (*Credentials, error) {
 	username, err := getRegistryString(i.settings, "username")
 	if err != nil {

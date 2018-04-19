@@ -12,6 +12,11 @@ type Settings struct {
 	PerformElevatedSetup PerformElevatedSetupFunc
 }
 
+type Credentials struct {
+	Username string
+	Password string
+}
+
 type Instance interface {
 	Settings() *Settings
 	Check(consumer *state.Consumer) error
