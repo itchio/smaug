@@ -1,0 +1,17 @@
+
+stages:
+  - test
+
+test:windows:
+  stage: test
+  tags:
+    - windows
+  script:
+    - scripts/ci.sh
+
+test:darwin:
+  stage: test
+  tags:
+    - darwin
+  script:
+    - scripts/ci.sh
