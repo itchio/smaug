@@ -6,7 +6,7 @@ import (
 	"io"
 	"runtime"
 
-	"github.com/itchio/butler/manager"
+	"github.com/itchio/ox"
 	"github.com/itchio/smaug/fuji"
 	"github.com/itchio/wharf/state"
 )
@@ -27,7 +27,7 @@ type RunnerParams struct {
 	Stderr io.Writer
 
 	InstallFolder string
-	Runtime       *manager.Runtime
+	Runtime       *ox.Runtime
 
 	// runner-specific params
 
