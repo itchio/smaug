@@ -12,33 +12,57 @@ import (
 )
 
 type appRunner struct {
-	params *RunnerParams
+	params       RunnerParams
+	target       *MacLaunchTarget
+	simpleRunner Runner
 }
 
 var _ Runner = (*appRunner)(nil)
 
-func newAppRunner(params *RunnerParams) (Runner, error) {
+func newAppRunner(params RunnerParams) (Runner, error) {
+	target, err := PrepareMacLaunchTarget(params)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	params.FullTargetPath = target.Path
+
 	ar := &appRunner{
 		params: params,
+		target: target,
 	}
+
+	if !target.IsAppBundle {
+		ar.simpleRunner, err = newSimpleRunner(params)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
 	return ar, nil
 }
 
 func (ar *appRunner) Prepare() error {
+	if ar.simpleRunner {
+		return ar.simpleRunner.Prepare()
+	}
+
 	// nothing to prepare
 	return nil
 }
 
 func (ar *appRunner) Run() error {
-	params := ar.params
+	if ar.simpleRunner {
+		params.Consumer.Infof("Mac app runner here, delegating run to simple runner")
+		return ar.simpleRunner.Run()
+	}
 
 	return RunAppBundle(
 		params,
-		params.FullTargetPath,
+		ar.target.Path,
 	)
 }
 
-func RunAppBundle(params *RunnerParams, bundlePath string) error {
+func RunAppBundle(params RunnerParams, bundlePath string) error {
 	consumer := params.Consumer
 
 	var args = []string{
