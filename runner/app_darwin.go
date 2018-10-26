@@ -42,7 +42,7 @@ func newAppRunner(params RunnerParams) (Runner, error) {
 }
 
 func (ar *appRunner) Prepare() error {
-	if ar.simpleRunner {
+	if ar.simpleRunner != nil {
 		return ar.simpleRunner.Prepare()
 	}
 
@@ -51,13 +51,14 @@ func (ar *appRunner) Prepare() error {
 }
 
 func (ar *appRunner) Run() error {
-	if ar.simpleRunner {
-		params.Consumer.Infof("Mac app runner here, delegating run to simple runner")
+	consumer := ar.params.Consumer
+	if ar.simpleRunner != nil {
+		consumer.Infof("Mac app runner here, delegating run to simple runner")
 		return ar.simpleRunner.Run()
 	}
 
 	return RunAppBundle(
-		params,
+		ar.params,
 		ar.target.Path,
 	)
 }

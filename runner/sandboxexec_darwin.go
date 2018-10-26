@@ -57,14 +57,17 @@ func (ser *sandboxExecRunner) Prepare() error {
 }
 
 func (ser *sandboxExecRunner) SandboxProfilePath() string {
+	params := ser.params
 	return filepath.Join(params.InstallFolder, ".itch", "isolate-app.sb")
 }
 
 func (ser *sandboxExecRunner) WriteSandboxProfile() error {
 	sandboxProfilePath := ser.SandboxProfilePath()
 
+	params := ser.params
+	consumer := params.Consumer
 	consumer.Opf("Writing sandbox profile to (%s)", sandboxProfilePath)
-	err = os.MkdirAll(filepath.Dir(sandboxProfilePath), 0755)
+	err := os.MkdirAll(filepath.Dir(sandboxProfilePath), 0755)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -99,7 +102,7 @@ func (ser *sandboxExecRunner) Run() error {
 	params := ser.params
 	consumer := params.Consumer
 
-	err = ser.WriteSandboxProfile()
+	err := ser.WriteSandboxProfile()
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -107,8 +110,8 @@ func (ser *sandboxExecRunner) Run() error {
 	if !ser.target.IsAppBundle {
 		consumer.Infof("Dealing with naked executable, launching via sandbox-exec directly")
 		args := []string{
-			"sandbox-exec"
-			"-f"
+			"sandbox-exec",
+			"-f",
 			ser.SandboxProfilePath(),
 			params.FullTargetPath,
 		}
@@ -118,12 +121,12 @@ func (ser *sandboxExecRunner) Run() error {
 		simpleParams.Args = args
 		simpleRunner, err := newSimpleRunner(simpleParams)
 		if err != nil {
-		  return errors.WithStack(err)
+			return errors.WithStack(err)
 		}
 
 		err = simpleRunner.Prepare()
 		if err != nil {
-		  return errors.WithStack(err)
+			return errors.WithStack(err)
 		}
 
 		return simpleRunner.Run()
