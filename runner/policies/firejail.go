@@ -7,17 +7,20 @@ package policies
 // whitelist doesn't seem to work with exclusions, though?
 
 const FirejailTemplate = `
-blacklist ~/.config/itch/users
-blacklist ~/.config/itch/butler_creds
-blacklist ~/.config/itch/marketdb
-blacklist ~/.config/itch/Cookies
-blacklist ~/.config/itch/Partitions
+include /etc/firejail/itch_game_{{.Name}}.local
+include /etc/firejail/itch_games_globals.local
 
-blacklist ~/.config/kitch/users
-blacklist ~/.config/kitch/butler_creds
-blacklist ~/.config/kitch/marketdb
-blacklist ~/.config/kitch/Cookies
-blacklist ~/.config/kitch/Partitions
+noblacklist {{.FullTargetPath}}
+noblacklist {{.InstallFolder}}
+blacklist {{.InstallFolder}}/.itch
+
+noblacklist ${HOME}/.config/itch/apps
+blacklist   ${HOME}/.config/itch/*
+blacklist   ${HOME}/.config/itch/apps/*
+
+noblacklist ${HOME}/.config/kitch/apps
+blacklist   ${HOME}/.config/kitch/*
+blacklist   ${HOME}/.config/kitch/apps/*
 
 blacklist ~/.config/chromium
 blacklist ~/.config/chrome

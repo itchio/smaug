@@ -4,10 +4,10 @@ package runner
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"text/template"
 
 	"github.com/itchio/smaug/runner/policies"
 	"github.com/pkg/errors"
@@ -48,9 +48,18 @@ func (fr *firejailRunner) Run() error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
-	sandboxSource := policies.FirejailTemplate
-	err = ioutil.WriteFile(sandboxProfilePath, []byte(sandboxSource), 0644)
+	
+	sandboxTemplate, err := template.New("firejail-profile").Parse(policies.FirejailTemplate)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	
+	sandboxFile, err := os.OpenFile(sandboxProfilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	
+	err = sandboxTemplate.Execute(sandboxFile, params)
 	if err != nil {
 		return errors.WithStack(err)
 	}
