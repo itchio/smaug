@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/itchio/ox/winox"
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/state"
 	"github.com/pkg/errors"
 )
 

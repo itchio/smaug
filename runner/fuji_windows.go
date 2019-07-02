@@ -11,7 +11,7 @@ import (
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/ox/winox/execas"
 	"github.com/itchio/smaug/fuji"
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/state"
 	"github.com/pkg/errors"
 )
 

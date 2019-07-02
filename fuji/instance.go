@@ -1,6 +1,6 @@
 package fuji
 
-import "github.com/itchio/wharf/state"
+import "github.com/itchio/headway/state"
 
 type Settings struct {
 	// CredentialsRegistryKey is the path of a key under HKEY_CURRENT_USER

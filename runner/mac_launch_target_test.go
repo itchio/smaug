@@ -6,9 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/itchio/headway/state"
 	"github.com/itchio/smaug/runner"
-	"github.com/itchio/wharf/state"
-	"github.com/itchio/wharf/wtest"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,12 +15,12 @@ func Test_PrepareMacLaunchTarget(t *testing.T) {
 	assert := assert.New(t)
 
 	installFolder, err := ioutil.TempDir("", "install-folder")
-	wtest.Must(t, err)
+	tmust(t, err)
 	defer os.RemoveAll(installFolder)
 
 	t.Logf("Regular app bundle")
 	bundlePath := filepath.Join(installFolder, "Foobar.app")
-	wtest.Must(t, os.MkdirAll(bundlePath, 0755))
+	tmust(t, os.MkdirAll(bundlePath, 0755))
 
 	consumer := &state.Consumer{
 		OnMessage: func(lvl string, msg string) {
@@ -42,8 +41,8 @@ func Test_PrepareMacLaunchTarget(t *testing.T) {
 
 	t.Logf("Naked executable (not in bundle)")
 	nakedExecPath := filepath.Join(installFolder, "utilities", "x86_64", "bin", "jtool")
-	wtest.Must(t, os.MkdirAll(filepath.Dir(nakedExecPath), 0755))
-	wtest.Must(t, ioutil.WriteFile(nakedExecPath, machoHeader, 0755))
+	tmust(t, os.MkdirAll(filepath.Dir(nakedExecPath), 0755))
+	tmust(t, ioutil.WriteFile(nakedExecPath, machoHeader, 0755))
 
 	params.FullTargetPath = nakedExecPath
 	target, err = runner.PrepareMacLaunchTarget(params)
@@ -53,12 +52,22 @@ func Test_PrepareMacLaunchTarget(t *testing.T) {
 
 	t.Logf("Nested executable (in bundle)")
 	nestedExecPath := filepath.Join(bundlePath, "Contents", "MacOS", "crabapple-launcher")
-	wtest.Must(t, os.MkdirAll(filepath.Dir(nestedExecPath), 0755))
-	wtest.Must(t, ioutil.WriteFile(nestedExecPath, machoHeader, 0755))
+	tmust(t, os.MkdirAll(filepath.Dir(nestedExecPath), 0755))
+	tmust(t, ioutil.WriteFile(nestedExecPath, machoHeader, 0755))
 
 	params.FullTargetPath = nestedExecPath
 	target, err = runner.PrepareMacLaunchTarget(params)
 	assert.NoError(err)
 	assert.EqualValues(bundlePath, target.Path)
 	assert.True(target.IsAppBundle)
+}
+
+// tmust shows a complete error stack and fails a test immediately
+// if err is non-nil
+func tmust(t *testing.T, err error) {
+	if err != nil {
+		t.Helper()
+		t.Errorf("%+v", err)
+		t.FailNow()
+	}
 }

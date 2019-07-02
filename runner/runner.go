@@ -8,7 +8,7 @@ import (
 
 	"github.com/itchio/ox"
 	"github.com/itchio/smaug/fuji"
-	"github.com/itchio/wharf/state"
+	"github.com/itchio/headway/state"
 )
 
 type RunnerParams struct {
