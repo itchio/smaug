@@ -195,7 +195,7 @@ func (ser *sandboxExecRunner) Run() error {
 	}
 
 	if investigateSandbox {
-		consumer.Warnf("Wrote shim app to (%s), waiting forever because INVESTIGATE_SANDBOX is set to 1")
+		consumer.Warnf("Wrote shim app to (%s), waiting forever because INVESTIGATE_SANDBOX is set to 1", shimBundlePath)
 		for {
 			time.Sleep(1 * time.Second)
 		}
