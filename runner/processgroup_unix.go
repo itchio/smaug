@@ -54,7 +54,7 @@ func (pg *processGroup) Wait() error {
 			return errors.WithStack(err)
 		} else {
 			if err != nil {
-				pg.consumer.Infof("Could not get group of process %d: %s", err.Error())
+				pg.consumer.Infof("Could not get group of process %d: %s", pid, err.Error())
 			} else {
 				pg.consumer.Infof("Process %d had no group", pid)
 			}
