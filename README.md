@@ -10,7 +10,7 @@ smaug contains utilities for running processes:
 
   * ...tied to a context (like `exec.CommandWithContext`)
   * ...in a process group (so a whole process tree can be waited on or killed)
-  * ...optionaly in a sandbox, such as:
+  * ...optionally in a sandbox, such as:
     * firejail on Linux
     * sandbox-exec on macOS
     * a separate user on Windows (see `fuji`)
