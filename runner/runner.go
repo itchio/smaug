@@ -6,9 +6,9 @@ import (
 	"io"
 	"runtime"
 
+	"github.com/itchio/headway/state"
 	"github.com/itchio/ox"
 	"github.com/itchio/smaug/fuji"
-	"github.com/itchio/headway/state"
 )
 
 type RunnerParams struct {
@@ -28,6 +28,7 @@ type RunnerParams struct {
 	Stderr io.Writer
 
 	InstallFolder string
+	TempDir       string
 	Runtime       *ox.Runtime
 
 	// runner-specific params
