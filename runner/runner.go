@@ -29,7 +29,7 @@ type RunnerParams struct {
 
 	InstallFolder string
 	TempDir       string
-	Runtime       *ox.Runtime
+	Runtime       ox.Runtime
 
 	// runner-specific params
 
