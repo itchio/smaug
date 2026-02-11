@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/itchio/headway/state"
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/ox/winox/execas"
 	"github.com/itchio/smaug/fuji"
-	"github.com/itchio/headway/state"
 )
 
 type fujiRunner struct {

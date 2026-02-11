@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/itchio/ox/winox"
 	"github.com/itchio/headway/state"
+	"github.com/itchio/ox/winox"
 )
 
 // Setup ensures that fuji can run properly, ie.: that the

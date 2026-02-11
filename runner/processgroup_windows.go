@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/itchio/headway/state"
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox/execas"
-	"github.com/itchio/headway/state"
 )
 
 const magicCompletionKey uint32 = 0xf00d

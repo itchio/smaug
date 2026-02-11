@@ -7,8 +7,8 @@ import (
 
 	"github.com/itchio/ox/syscallex"
 
-	"github.com/itchio/ox/winox"
 	"github.com/itchio/headway/state"
+	"github.com/itchio/ox/winox"
 )
 
 type SetFilePermissionParams struct {

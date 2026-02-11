@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"syscall"
 
+	"github.com/itchio/headway/state"
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox"
-	"github.com/itchio/headway/state"
 )
 
 func (i *instance) Check(consumer *state.Consumer) error {
