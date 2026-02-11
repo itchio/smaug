@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -42,7 +41,7 @@ func PrepareMacLaunchTarget(params RunnerParams) (*MacLaunchTarget, error) {
 			target.IsAppBundle = true
 			return target, nil
 		}
-		return nil, errors.New("(%s) is a directory but does not in .app - doesn't look like an app bundle")
+		return nil, fmt.Errorf("(%s) is a directory but does not end in .app - doesn't look like an app bundle", target.Path)
 	}
 
 	{

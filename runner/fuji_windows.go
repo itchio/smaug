@@ -93,7 +93,7 @@ func (wr *fujiRunner) Run() error {
 
 	err = sp.Grant(consumer)
 	if err != nil {
-		consumer.Warnf(err.Error())
+		consumer.Warnf("%s", err)
 		consumer.Warnf("Attempting launch anyway...")
 	}
 
