@@ -7,7 +7,7 @@
 
 Smaug is a Go library for running processes with context-aware lifecycle management, process group control, and optional platform-specific sandboxing. It provides a unified interface for launching executables across Windows, macOS, and Linux while handling the platform differences behind the scenes.
 
-Built for the [itch.io app](https://itch.io/itch) to securely launch untrusted game binaries, smaug selects the right execution strategy automatically based on the target OS and whether sandboxing is enabled. The `runner` package exposes a `Runner` interface — call `GetRunner()` with your parameters, then `Prepare()` and `Run()`.
+Built for the [itch.io app](https://itch.io/itch) to launch game binaries, smaug selects the right execution strategy automatically based on the target OS and whether sandboxing is enabled. The `runner` package exposes a `Runner` interface — call `GetRunner()` with your parameters, then `Prepare()` and `Run()`.
 
 ## Features
 
