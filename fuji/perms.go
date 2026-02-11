@@ -1,4 +1,4 @@
-//+build windows
+//go:build windows
 
 package fuji
 
@@ -9,7 +9,6 @@ import (
 
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/headway/state"
-	"github.com/pkg/errors"
 )
 
 type SetFilePermissionParams struct {
@@ -62,13 +61,13 @@ func SetFilePermissions(consumer *state.Consumer, params *SetFilePermissionParam
 		consumer.Opf("Granting %s", policy)
 		err := policy.Grant(consumer)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 	case "revoke":
 		consumer.Opf("Revoking %s", policy)
 		err := policy.Revoke(consumer)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 	default:
 		return fmt.Errorf("unknown change: %s", params.Change)
@@ -98,12 +97,12 @@ type CheckAccessParams struct {
 func (i *instance) CheckAccess(consumer *state.Consumer, params *CheckAccessParams) error {
 	creds, err := i.GetCredentials()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	impersonationToken, err := winox.GetImpersonationToken(creds.Username, ".", creds.Password)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	defer winox.SafeRelease(uintptr(impersonationToken))
 
@@ -114,7 +113,7 @@ func (i *instance) CheckAccess(consumer *state.Consumer, params *CheckAccessPara
 			params.File,
 		)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 
 		if hasAccess {

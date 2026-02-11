@@ -1,10 +1,10 @@
-//+build darwin
+//go:build darwin
 
 package runner
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,7 +13,6 @@ import (
 
 	"github.com/itchio/ox/macox"
 	"github.com/itchio/smaug/runner/policies"
-	"github.com/pkg/errors"
 )
 
 var investigateSandbox = os.Getenv("INVESTIGATE_SANDBOX") == "1"
@@ -28,7 +27,7 @@ var _ Runner = (*sandboxExecRunner)(nil)
 func newSandboxExecRunner(params RunnerParams) (Runner, error) {
 	target, err := PrepareMacLaunchTarget(params)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	params.FullTargetPath = target.Path
 
@@ -69,31 +68,29 @@ func (ser *sandboxExecRunner) WriteSandboxProfile() error {
 	consumer.Opf("Writing sandbox profile to (%s)", sandboxProfilePath)
 	err := os.MkdirAll(filepath.Dir(sandboxProfilePath), 0755)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	userLibrary, err := macox.GetLibraryPath()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	sandboxSource := policies.SandboxExecTemplate
-	sandboxSource = strings.Replace(
+	sandboxSource = strings.ReplaceAll(
 		sandboxSource,
 		"{{USER_LIBRARY}}",
 		userLibrary,
-		-1, /* replace all instances */
 	)
-	sandboxSource = strings.Replace(
+	sandboxSource = strings.ReplaceAll(
 		sandboxSource,
 		"{{INSTALL_LOCATION}}",
 		params.InstallFolder,
-		-1, /* replace all instances */
 	)
 
-	err = ioutil.WriteFile(sandboxProfilePath, []byte(sandboxSource), 0644)
+	err = os.WriteFile(sandboxProfilePath, []byte(sandboxSource), 0644)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	return nil
 }
@@ -104,7 +101,7 @@ func (ser *sandboxExecRunner) Run() error {
 
 	err := ser.WriteSandboxProfile()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	if !ser.target.IsAppBundle {
@@ -121,12 +118,12 @@ func (ser *sandboxExecRunner) Run() error {
 		simpleParams.Args = args
 		simpleRunner, err := newSimpleRunner(simpleParams)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 
 		err = simpleRunner.Prepare()
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 
 		return simpleRunner.Run()
@@ -137,13 +134,13 @@ func (ser *sandboxExecRunner) Run() error {
 
 	binaryPath, err := macox.GetExecutablePath(realBundlePath)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	binaryName := filepath.Base(binaryPath)
 
-	workDir, err := ioutil.TempDir("", "butler-shim-bundle")
+	workDir, err := os.MkdirTemp("", "butler-shim-bundle")
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	defer os.RemoveAll(workDir)
 
@@ -161,7 +158,7 @@ func (ser *sandboxExecRunner) Run() error {
 	)
 	err = os.MkdirAll(filepath.Dir(shimBinaryPath), 0755)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	shimBinaryContents := fmt.Sprintf(`#!/bin/bash
@@ -173,9 +170,9 @@ func (ser *sandboxExecRunner) Run() error {
 		binaryPath,
 	)
 
-	err = ioutil.WriteFile(shimBinaryPath, []byte(shimBinaryContents), 0744)
+	err = os.WriteFile(shimBinaryPath, []byte(shimBinaryContents), 0744)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = os.Symlink(
@@ -183,7 +180,7 @@ func (ser *sandboxExecRunner) Run() error {
 		filepath.Join(shimBundlePath, "Contents", "Resources"),
 	)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = os.Symlink(
@@ -191,7 +188,7 @@ func (ser *sandboxExecRunner) Run() error {
 		filepath.Join(shimBundlePath, "Contents", "Info.plist"),
 	)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	if investigateSandbox {

@@ -1,13 +1,12 @@
-// +build !linux
+//go:build !linux
 
 package runner
 
 import (
+	"fmt"
 	"runtime"
-
-	"github.com/pkg/errors"
 )
 
 func newFirejailRunner(params RunnerParams) (Runner, error) {
-	return nil, errors.Errorf("firejail runner is not implemented on %s", runtime.GOOS)
+	return nil, fmt.Errorf("firejail runner is not implemented on %s", runtime.GOOS)
 }

@@ -1,16 +1,16 @@
-// +build windows
+//go:build windows
 
 package runner
 
 import (
 	"context"
+	"fmt"
 	"syscall"
 	"unsafe"
 
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox/execas"
 	"github.com/itchio/headway/state"
-	"github.com/pkg/errors"
 )
 
 const magicCompletionKey uint32 = 0xf00d
@@ -45,7 +45,7 @@ func (pg *processGroup) AfterStart() error {
 	pg.consumer.Debugf("Resuming %x", pg.cmd.SysProcAttr.ThreadHandle)
 	_, err = syscallex.ResumeThread(pg.cmd.SysProcAttr.ThreadHandle)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	return nil
 }
@@ -54,7 +54,7 @@ func (pg *processGroup) tryAssignJobObject() error {
 	var err error
 	pg.jobObject, err = syscallex.CreateJobObject(nil, nil)
 	if err != nil {
-		return errors.WithMessage(err, "CreateJobObject")
+		return fmt.Errorf("CreateJobObject: %w", err)
 	}
 
 	{
@@ -70,14 +70,14 @@ func (pg *processGroup) tryAssignJobObject() error {
 			jobObjectInfoSize,
 		)
 		if err != nil {
-			return errors.WithMessage(err, "Setting KILL_ON_JOB_CLOSE")
+			return fmt.Errorf("Setting KILL_ON_JOB_CLOSE: %w", err)
 		}
 	}
 
 	{
 		pg.ioPort, err = syscall.CreateIoCompletionPort(syscall.InvalidHandle, 0, 0, 1)
 		if err != nil {
-			return errors.WithMessage(err, "CreateIoCompletionPort")
+			return fmt.Errorf("CreateIoCompletionPort: %w", err)
 		}
 
 		jobObjectInfo := new(syscallex.JobObjectAssociateCompletionPort)
@@ -93,7 +93,7 @@ func (pg *processGroup) tryAssignJobObject() error {
 			jobObjectInfoSize,
 		)
 		if err != nil {
-			return errors.WithMessage(err, "Setting completion port")
+			return fmt.Errorf("Setting completion port: %w", err)
 		}
 	}
 
@@ -165,7 +165,7 @@ func (pg *processGroup) Wait() error {
 				}
 
 				if !ignoreError {
-					return errors.WithStack(err)
+					return fmt.Errorf("%w", err)
 				}
 			}
 
@@ -183,7 +183,7 @@ func (pg *processGroup) Wait() error {
 	case err := <-waitDone:
 		pg.consumer.Infof("Wait done")
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 	}
 
@@ -193,12 +193,12 @@ func (pg *processGroup) Wait() error {
 func terminateProcess(pid uint32, exitcode int) error {
 	h, err := syscall.OpenProcess(syscall.PROCESS_TERMINATE, false, pid)
 	if err != nil {
-		return errors.WithMessage(err, "OpenProcess(PROCESS_TERMINATE)")
+		return fmt.Errorf("OpenProcess(PROCESS_TERMINATE): %w", err)
 	}
 	defer syscall.CloseHandle(h)
 	err = syscall.TerminateProcess(h, uint32(exitcode))
 	if err != nil {
-		return errors.WithMessage(err, "TerminateProcess")
+		return fmt.Errorf("TerminateProcess: %w", err)
 	}
 	return nil
 }

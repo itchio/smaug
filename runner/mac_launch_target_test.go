@@ -1,7 +1,6 @@
 package runner_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +13,7 @@ import (
 func Test_PrepareMacLaunchTarget(t *testing.T) {
 	assert := assert.New(t)
 
-	installFolder, err := ioutil.TempDir("", "install-folder")
+	installFolder, err := os.MkdirTemp("", "install-folder")
 	tmust(t, err)
 	defer os.RemoveAll(installFolder)
 
@@ -42,7 +41,7 @@ func Test_PrepareMacLaunchTarget(t *testing.T) {
 	t.Logf("Naked executable (not in bundle)")
 	nakedExecPath := filepath.Join(installFolder, "utilities", "x86_64", "bin", "jtool")
 	tmust(t, os.MkdirAll(filepath.Dir(nakedExecPath), 0755))
-	tmust(t, ioutil.WriteFile(nakedExecPath, machoHeader, 0755))
+	tmust(t, os.WriteFile(nakedExecPath, machoHeader, 0755))
 
 	params.FullTargetPath = nakedExecPath
 	target, err = runner.PrepareMacLaunchTarget(params)
@@ -53,7 +52,7 @@ func Test_PrepareMacLaunchTarget(t *testing.T) {
 	t.Logf("Nested executable (in bundle)")
 	nestedExecPath := filepath.Join(bundlePath, "Contents", "MacOS", "crabapple-launcher")
 	tmust(t, os.MkdirAll(filepath.Dir(nestedExecPath), 0755))
-	tmust(t, ioutil.WriteFile(nestedExecPath, machoHeader, 0755))
+	tmust(t, os.WriteFile(nestedExecPath, machoHeader, 0755))
 
 	params.FullTargetPath = nestedExecPath
 	target, err = runner.PrepareMacLaunchTarget(params)

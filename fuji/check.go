@@ -1,21 +1,21 @@
-//+build windows
+//go:build windows
 
 package fuji
 
 import (
+	"fmt"
 	"syscall"
 
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/headway/state"
-	"github.com/pkg/errors"
 )
 
 func (i *instance) Check(consumer *state.Consumer) error {
 	consumer.Opf("Retrieving player data from registry...")
 	creds, err := i.GetCredentials()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	consumer.Statf("Sandbox user is (%s)", creds.Username)
@@ -44,18 +44,18 @@ func (i *instance) Check(consumer *state.Consumer) error {
 					syscall.StringToUTF16Ptr(newPassword),
 				)
 				if err != nil {
-					return errors.WithStack(err)
+					return fmt.Errorf("%w", err)
 				}
 
 				creds.Password = newPassword
 				err = i.saveCredentials(creds)
 				if err != nil {
-					return errors.WithStack(err)
+					return fmt.Errorf("%w", err)
 				}
 
 				token, err = winox.Logon(creds.Username, ".", creds.Password)
 				if err != nil {
-					return errors.WithStack(err)
+					return fmt.Errorf("%w", err)
 				}
 
 				consumer.Statf("Set new password successfully!")
@@ -65,7 +65,7 @@ func (i *instance) Check(consumer *state.Consumer) error {
 		}
 
 		if !rescued {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 	}
 	defer winox.SafeRelease(uintptr(token))

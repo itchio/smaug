@@ -1,15 +1,15 @@
-// +build windows
+//go:build windows
 
 package runner
 
 import (
+	"fmt"
 	"path/filepath"
 	"syscall"
 	"unsafe"
 
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox"
-	"github.com/pkg/errors"
 )
 
 func getAttachRunner(params RunnerParams) (Runner, error) {
@@ -20,7 +20,7 @@ func getAttachRunner(params RunnerParams) (Runner, error) {
 		0,
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "could not create toolhelp32 snapshot")
+		return nil, fmt.Errorf("could not create toolhelp32 snapshot: %w", err)
 	}
 
 	defer winox.SafeRelease(uintptr(snapshot))
@@ -29,7 +29,7 @@ func getAttachRunner(params RunnerParams) (Runner, error) {
 	entry.Size = uint32(unsafe.Sizeof(entry))
 	err = syscallex.Process32First(snapshot, &entry)
 	if err != nil {
-		return nil, errors.WithMessage(err, "could not get first process")
+		return nil, fmt.Errorf("could not get first process: %w", err)
 	}
 
 	basePath := filepath.Base(params.FullTargetPath)
@@ -40,13 +40,13 @@ func getAttachRunner(params RunnerParams) (Runner, error) {
 		err := func() error {
 			process, err := syscall.OpenProcess(syscall.PROCESS_QUERY_INFORMATION, false, entry.ProcessID)
 			if err != nil {
-				return errors.WithStack(err)
+				return fmt.Errorf("%w", err)
 			}
 			defer winox.SafeRelease(uintptr(process))
 
 			name, err := syscallex.QueryFullProcessImageName(process, 0)
 			if err != nil {
-				return errors.WithStack(err)
+				return fmt.Errorf("%w", err)
 			}
 			numInspected++
 
@@ -110,7 +110,7 @@ func (ar *attachRunner) bringWindowsToForeground() {
 	var cbErr error
 	cb := syscall.NewCallback(func(hwnd syscall.Handle, lparam uintptr) uintptr {
 		if lparam != referenceLparam {
-			cbErr = errors.Errorf("Internal error: expected lparam %d, but got %d", referenceLparam, lparam)
+			cbErr = fmt.Errorf("Internal error: expected lparam %d, but got %d", referenceLparam, lparam)
 			return 0
 		}
 
@@ -174,14 +174,14 @@ func (ar *attachRunner) Run() error {
 
 	processHandle, err := syscall.OpenProcess(syscall.SYNCHRONIZE, false, ar.pid)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	defer winox.SafeRelease(uintptr(processHandle))
 
 	consumer.Infof("Attached to PID (%d)", ar.pid)
 	_, err = syscall.WaitForSingleObject(processHandle, syscall.INFINITE)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	return nil

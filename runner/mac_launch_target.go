@@ -1,12 +1,11 @@
 package runner
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type MacLaunchTarget struct {
@@ -34,7 +33,7 @@ func PrepareMacLaunchTarget(params RunnerParams) (*MacLaunchTarget, error) {
 
 	stats, err := os.Stat(params.FullTargetPath)
 	if err != nil {
-		return nil, errors.WithMessage(err, "while preparing mac launch target")
+		return nil, fmt.Errorf("while preparing mac launch target: %w", err)
 	}
 
 	if stats.IsDir() {

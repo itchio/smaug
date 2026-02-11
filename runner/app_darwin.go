@@ -1,14 +1,14 @@
-//+build darwin
+//go:build darwin
 
 package runner
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
 
 	"github.com/itchio/ox/macox"
-	"github.com/pkg/errors"
 )
 
 type appRunner struct {
@@ -22,7 +22,7 @@ var _ Runner = (*appRunner)(nil)
 func newAppRunner(params RunnerParams) (Runner, error) {
 	target, err := PrepareMacLaunchTarget(params)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	params.FullTargetPath = target.Path
 
@@ -34,7 +34,7 @@ func newAppRunner(params RunnerParams) (Runner, error) {
 	if !target.IsAppBundle {
 		ar.simpleRunner, err = newSimpleRunner(params)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, fmt.Errorf("%w", err)
 		}
 	}
 
@@ -77,7 +77,7 @@ func RunAppBundle(params RunnerParams, bundlePath string) error {
 
 	binaryPath, err := macox.GetExecutablePath(bundlePath)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	consumer.Infof("Actual binary is (%s)", binaryPath)
@@ -120,7 +120,7 @@ func RunAppBundle(params RunnerParams, bundlePath string) error {
 	err = cmd.Run()
 	close(processDone)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	return nil

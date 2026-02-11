@@ -1,11 +1,12 @@
-// +build windows
+//go:build windows
 
 package runner
 
 import (
+	"fmt"
+
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox/execas"
-	"github.com/pkg/errors"
 )
 
 type simpleRunner struct {
@@ -47,22 +48,22 @@ func (sr *simpleRunner) Run() error {
 
 	pg, err := NewProcessGroup(consumer, cmd, params.Ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = pg.AfterStart()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = pg.Wait()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	return nil

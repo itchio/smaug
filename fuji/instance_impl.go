@@ -1,8 +1,8 @@
-//+build windows
+//go:build windows
 
 package fuji
 
-import "github.com/pkg/errors"
+import "fmt"
 
 type instance struct {
 	settings *Settings
@@ -12,7 +12,7 @@ var _ Instance = (*instance)(nil)
 
 func NewInstance(settings *Settings) (Instance, error) {
 	if settings.CredentialsRegistryKey == "" {
-		return nil, errors.Errorf("CredentialsRegistryKey cannot be empty")
+		return nil, fmt.Errorf("CredentialsRegistryKey cannot be empty")
 	}
 
 	i := &instance{

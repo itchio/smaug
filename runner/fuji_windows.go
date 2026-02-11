@@ -1,4 +1,4 @@
-//+build windows
+//go:build windows
 
 package runner
 
@@ -12,7 +12,6 @@ import (
 	"github.com/itchio/ox/winox/execas"
 	"github.com/itchio/smaug/fuji"
 	"github.com/itchio/headway/state"
-	"github.com/pkg/errors"
 )
 
 type fujiRunner struct {
@@ -25,7 +24,7 @@ var _ Runner = (*fujiRunner)(nil)
 
 func newFujiRunner(params RunnerParams) (Runner, error) {
 	if params.FujiParams.Settings == nil {
-		return nil, errors.Errorf("FujiParams.Instance should be set")
+		return nil, fmt.Errorf("FujiParams.Instance should be set")
 	}
 
 	fi, err := fuji.NewInstance(params.FujiParams.Settings)
@@ -57,13 +56,13 @@ func (wr *fujiRunner) Prepare() error {
 		consumer.Infof("Sandbox setup done, checking again...")
 		err = fi.Check(nullConsumer)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 	}
 
 	credentials, err := fi.GetCredentials()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	wr.credentials = credentials
@@ -82,12 +81,12 @@ func (wr *fujiRunner) Run() error {
 
 	env, err := wr.getEnvironment()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	sp, err := wr.getSharingPolicy()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	consumer.Infof("Sharing policy: %s", sp)
@@ -121,22 +120,22 @@ func (wr *fujiRunner) Run() error {
 
 	pg, err := NewProcessGroup(consumer, cmd, params.Ctx)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = pg.AfterStart()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	err = pg.Wait()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	return nil
@@ -153,7 +152,7 @@ func (wr *fujiRunner) getSharingPolicy() (*winox.SharingPolicy, error) {
 
 	impersonationToken, err := winox.GetImpersonationToken(creds.Username, ".", creds.Password)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	defer winox.SafeRelease(uintptr(impersonationToken))
 
@@ -163,7 +162,7 @@ func (wr *fujiRunner) getSharingPolicy() (*winox.SharingPolicy, error) {
 		params.InstallFolder,
 	)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("%w", err)
 	}
 	if !hasAccess {
 		sp.Entries = append(sp.Entries, &winox.ShareEntry{
@@ -183,7 +182,7 @@ func (wr *fujiRunner) getSharingPolicy() (*winox.SharingPolicy, error) {
 			current,
 		)
 		if err != nil {
-			return nil, errors.WithStack(err)
+			return nil, fmt.Errorf("%w", err)
 		}
 
 		if !hasAccess {
@@ -221,7 +220,7 @@ func (wr *fujiRunner) getEnvironment() ([]string, error) {
 	err := winox.Impersonate(creds.Username, ".", creds.Password, func() error {
 		profileDir, err := winox.GetFolderPath(winox.FolderTypeProfile)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 		// environment variables are case-insensitive on windows,
 		// and exec{,as}.Command do case-insensitive deduplication properly
@@ -234,20 +233,20 @@ func (wr *fujiRunner) getEnvironment() ([]string, error) {
 
 		appDataDir, err := winox.GetFolderPath(winox.FolderTypeAppData)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 		setEnv("appdata", appDataDir)
 
 		localAppDataDir, err := winox.GetFolderPath(winox.FolderTypeLocalAppData)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 		setEnv("localappdata", localAppDataDir)
 
 		return nil
 	})
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("%w", err)
 	}
 
 	return env, nil

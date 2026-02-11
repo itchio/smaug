@@ -1,4 +1,4 @@
-//+build windows
+//go:build windows
 
 package fuji
 
@@ -8,7 +8,6 @@ import (
 
 	"github.com/itchio/ox/winox"
 	"github.com/itchio/headway/state"
-	"github.com/pkg/errors"
 )
 
 // Setup ensures that fuji can run properly, ie.: that the
@@ -37,7 +36,7 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 
 	existingCreds, err := i.GetCredentials()
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 	username = existingCreds.Username
 	if username != "" {
@@ -65,7 +64,7 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 
 		err = winox.AddUser(username, password, comment)
 		if err != nil {
-			return errors.WithStack(err)
+			return fmt.Errorf("%w", err)
 		}
 	}
 
@@ -73,14 +72,14 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 
 	err = winox.RemoveUserFromUsersGroup(username)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	consumer.Opf("Loading profile for the first time (to create some directories)...")
 
 	err = winox.LoadProfileOnce(username, ".", password)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	consumer.Opf("Saving to credentials registry...")
@@ -91,7 +90,7 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 	}
 	err = i.saveCredentials(creds)
 	if err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	consumer.Statf("All done! (in %s)", time.Since(startTime))
