@@ -122,11 +122,15 @@ func (pg *processGroup) Wait() error {
 			for {
 				err := syscall.GetQueuedCompletionStatus(pg.ioPort, &completionCode, &completionKey, &overlapped, syscall.INFINITE)
 				if err != nil {
+					pg.cmd.Wait()
 					waitDone <- err
 					return
 				}
 
 				if completionKey == magicCompletionKey && completionCode == syscallex.JOB_OBJECT_MSG_ACTIVE_PROCESS_ZERO {
+					// Call cmd.Wait() to properly release the process handle.
+					// Go 1.24+ panics if the process is GC'd without Wait().
+					pg.cmd.Wait()
 					waitDone <- nil
 					return
 				}
@@ -180,6 +184,9 @@ func (pg *processGroup) Wait() error {
 				}
 			}
 		}
+		// Wait for the goroutine to finish, which calls cmd.Wait()
+		// to properly release the process handle (required by Go 1.24+).
+		<-waitDone
 	case err := <-waitDone:
 		pg.consumer.Infof("Wait done")
 		if err != nil {
