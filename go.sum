@@ -6,6 +6,8 @@ github.com/itchio/headway v0.0.0-20251229214354-da882c8b5dd4 h1:vOYjkMs+aVNeHU0d
 github.com/itchio/headway v0.0.0-20251229214354-da882c8b5dd4/go.mod h1:1/4tbTrV3G/Su53pnKBpa5mv3cVkLweRAq/xRnulSQI=
 github.com/itchio/ox v0.0.0-20260204011704-8e7bc5639671 h1:e78FK2tPyEA7uJlPhB36sqezp262LKuFsj8q/nPrdjM=
 github.com/itchio/ox v0.0.0-20260204011704-8e7bc5639671/go.mod h1:433sW0ck7/e5u7yycn9pmuK84/askPuhm3MqtwFl9zk=
+github.com/itchio/ox v0.0.0-20260212201121-1e6be0bfd382 h1:FKGDIamOblBuLCYDxJkGEGCKZ5YG5gJvhCEXb6IcZA8=
+github.com/itchio/ox v0.0.0-20260212201121-1e6be0bfd382/go.mod h1:433sW0ck7/e5u7yycn9pmuK84/askPuhm3MqtwFl9zk=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=
 github.com/kr/text v0.2.0/go.mod h1:eLer722TekiGuMkidMxC/pM04lWEeraHUUmBw8l2grE=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e h1:fD57ERR4JtEqsWbfPhv4DMiApHyliiK5xCTNVSPiaAs=

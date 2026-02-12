@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/itchio/headway v0.0.0-20251229214354-da882c8b5dd4
-	github.com/itchio/ox v0.0.0-20260204011704-8e7bc5639671
+	github.com/itchio/ox v0.0.0-20260212201121-1e6be0bfd382
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/sys v0.40.0
 )
