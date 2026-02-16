@@ -209,19 +209,34 @@ func TestContextCancellation(t *testing.T) {
 	}
 }
 
-func skipIfNoBubblewrap(t *testing.T) {
+func skipIfNoBubblewrap(t *testing.T) string {
 	t.Helper()
 	if runtime.GOOS != "linux" {
 		t.Skip("bubblewrap tests only run on Linux")
 	}
-	if _, err := exec.LookPath("bwrap"); err != nil {
+	bwrapPath, err := exec.LookPath("bwrap")
+	if err != nil {
 		t.Skip("bwrap not found in PATH")
 	}
+
+	// Bubblewrap can be present but unusable in restricted environments.
+	probeCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	probeCmd := exec.CommandContext(probeCtx, bwrapPath, "--unshare-user", "--ro-bind", "/", "/", "--", "true")
+	out, err := probeCmd.CombinedOutput()
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
+		if msg == "" {
+			msg = err.Error()
+		}
+		t.Skipf("bwrap found but unusable in this environment: %s", msg)
+	}
+
+	return bwrapPath
 }
 
-func newBubblewrapParams(t *testing.T, args ...string) runner.RunnerParams {
+func newBubblewrapParams(t *testing.T, bwrapPath string, args ...string) runner.RunnerParams {
 	t.Helper()
-	bwrapPath, _ := exec.LookPath("bwrap")
 	params := newTestParams(t, args...)
 	params.Sandbox = true
 	params.BubblewrapParams = runner.BubblewrapParams{
@@ -231,10 +246,10 @@ func newBubblewrapParams(t *testing.T, args ...string) runner.RunnerParams {
 }
 
 func TestBubblewrapBasicExecution(t *testing.T) {
-	skipIfNoBubblewrap(t)
+	bwrapPath := skipIfNoBubblewrap(t)
 
 	var stdout bytes.Buffer
-	params := newBubblewrapParams(t, "echo", "hello")
+	params := newBubblewrapParams(t, bwrapPath, "echo", "hello")
 	params.Stdout = &stdout
 
 	r, err := runner.GetRunner(params)
@@ -246,10 +261,10 @@ func TestBubblewrapBasicExecution(t *testing.T) {
 }
 
 func TestBubblewrapArgumentPassing(t *testing.T) {
-	skipIfNoBubblewrap(t)
+	bwrapPath := skipIfNoBubblewrap(t)
 
 	var stdout bytes.Buffer
-	params := newBubblewrapParams(t, "echo", "hello world", "foo\tbar", "baz\"qux")
+	params := newBubblewrapParams(t, bwrapPath, "echo", "hello world", "foo\tbar", "baz\"qux")
 	params.Stdout = &stdout
 
 	r, err := runner.GetRunner(params)
@@ -265,10 +280,10 @@ func TestBubblewrapArgumentPassing(t *testing.T) {
 }
 
 func TestBubblewrapStdoutStderr(t *testing.T) {
-	skipIfNoBubblewrap(t)
+	bwrapPath := skipIfNoBubblewrap(t)
 
 	var stdout, stderr bytes.Buffer
-	params := newBubblewrapParams(t, "output", "stdout", "out-msg", "stderr", "err-msg")
+	params := newBubblewrapParams(t, bwrapPath, "output", "stdout", "out-msg", "stderr", "err-msg")
 	params.Stdout = &stdout
 	params.Stderr = &stderr
 
@@ -282,12 +297,12 @@ func TestBubblewrapStdoutStderr(t *testing.T) {
 }
 
 func TestBubblewrapContextCancellation(t *testing.T) {
-	skipIfNoBubblewrap(t)
+	bwrapPath := skipIfNoBubblewrap(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	params := newBubblewrapParams(t, "sleep", "30000")
+	params := newBubblewrapParams(t, bwrapPath, "sleep", "30000")
 	params.Ctx = ctx
 
 	r, err := runner.GetRunner(params)
@@ -303,8 +318,9 @@ func TestBubblewrapContextCancellation(t *testing.T) {
 	cancel()
 
 	select {
-	case <-done:
-		// Run returned promptly after cancellation
+	case err := <-done:
+		// Run returned promptly after cancellation and did not fail before cancellation.
+		require.NoError(t, err)
 	case <-time.After(5 * time.Second):
 		t.Fatal("Run() did not return within 5 seconds after context cancellation")
 	}

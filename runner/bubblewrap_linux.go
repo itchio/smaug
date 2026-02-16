@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -77,6 +78,7 @@ func (br *bubblewrapRunner) Run() error {
 	if xdgRuntimeDir == "" {
 		xdgRuntimeDir = os.Getenv("XDG_RUNTIME_DIR")
 	}
+	createdSandboxDirs := make(map[string]struct{})
 
 	// X11
 	if _, err := os.Stat("/tmp/.X11-unix"); err == nil {
@@ -92,6 +94,7 @@ func (br *bubblewrapRunner) Run() error {
 		if waylandDisplay != "" {
 			socketPath := xdgRuntimeDir + "/" + waylandDisplay
 			if _, err := os.Stat(socketPath); err == nil {
+				ensureSandboxParentDirs(&args, createdSandboxDirs, socketPath)
 				args = append(args, "--ro-bind", socketPath, socketPath)
 			}
 		}
@@ -99,17 +102,16 @@ func (br *bubblewrapRunner) Run() error {
 		// PulseAudio
 		pulsePath := xdgRuntimeDir + "/pulse"
 		if _, err := os.Stat(pulsePath); err == nil {
+			ensureSandboxParentDirs(&args, createdSandboxDirs, pulsePath)
 			args = append(args, "--ro-bind", pulsePath, pulsePath)
 		}
 
 		// PipeWire
 		pipewirePath := xdgRuntimeDir + "/pipewire-0"
 		if _, err := os.Stat(pipewirePath); err == nil {
+			ensureSandboxParentDirs(&args, createdSandboxDirs, pipewirePath)
 			args = append(args, "--ro-bind", pipewirePath, pipewirePath)
 		}
-
-		// Bind XDG_RUNTIME_DIR itself as tmpfs so paths under it work
-		args = append(args, "--bind", xdgRuntimeDir, xdgRuntimeDir)
 	}
 
 	// Namespace isolation (keep network shared)
@@ -184,4 +186,29 @@ func envLookup(env []string, key string) string {
 		}
 	}
 	return ""
+}
+
+func ensureSandboxParentDirs(args *[]string, seen map[string]struct{}, path string) {
+	cleanPath := filepath.Clean(path)
+	if cleanPath == "" || cleanPath == "." || !filepath.IsAbs(cleanPath) {
+		return
+	}
+
+	parent := filepath.Dir(cleanPath)
+	if parent == "" || parent == "." || parent == "/" {
+		return
+	}
+
+	current := "/"
+	for _, part := range strings.Split(strings.TrimPrefix(parent, "/"), "/") {
+		if part == "" {
+			continue
+		}
+		current = filepath.Join(current, part)
+		if _, ok := seen[current]; ok {
+			continue
+		}
+		*args = append(*args, "--dir", current)
+		seen[current] = struct{}{}
+	}
 }
