@@ -33,12 +33,17 @@ type RunnerParams struct {
 
 	// runner-specific params
 
-	FirejailParams FirejailParams
-	FujiParams     FujiParams
-	AttachParams   AttachParams
+	FirejailParams   FirejailParams
+	BubblewrapParams BubblewrapParams
+	FujiParams       FujiParams
+	AttachParams     AttachParams
 }
 
 type FirejailParams struct {
+	BinaryPath string
+}
+
+type BubblewrapParams struct {
 	BinaryPath string
 }
 
@@ -75,6 +80,9 @@ func GetRunner(params RunnerParams) (Runner, error) {
 		return newSimpleRunner(params)
 	case "linux":
 		if params.Sandbox {
+			if params.BubblewrapParams.BinaryPath != "" {
+				return newBubblewrapRunner(params)
+			}
 			return newFirejailRunner(params)
 		}
 		return newSimpleRunner(params)

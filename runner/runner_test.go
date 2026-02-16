@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -206,6 +207,129 @@ func TestContextCancellation(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("Run() did not return within 5 seconds after context cancellation")
 	}
+}
+
+func skipIfNoBubblewrap(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "linux" {
+		t.Skip("bubblewrap tests only run on Linux")
+	}
+	if _, err := exec.LookPath("bwrap"); err != nil {
+		t.Skip("bwrap not found in PATH")
+	}
+}
+
+func newBubblewrapParams(t *testing.T, args ...string) runner.RunnerParams {
+	t.Helper()
+	bwrapPath, _ := exec.LookPath("bwrap")
+	params := newTestParams(t, args...)
+	params.Sandbox = true
+	params.BubblewrapParams = runner.BubblewrapParams{
+		BinaryPath: bwrapPath,
+	}
+	return params
+}
+
+func TestBubblewrapBasicExecution(t *testing.T) {
+	skipIfNoBubblewrap(t)
+
+	var stdout bytes.Buffer
+	params := newBubblewrapParams(t, "echo", "hello")
+	params.Stdout = &stdout
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	assert.Equal(t, "hello\n", stdout.String())
+}
+
+func TestBubblewrapArgumentPassing(t *testing.T) {
+	skipIfNoBubblewrap(t)
+
+	var stdout bytes.Buffer
+	params := newBubblewrapParams(t, "echo", "hello world", "foo\tbar", "baz\"qux")
+	params.Stdout = &stdout
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+	require.Len(t, lines, 3)
+	assert.Equal(t, "hello world", lines[0])
+	assert.Equal(t, "foo\tbar", lines[1])
+	assert.Equal(t, "baz\"qux", lines[2])
+}
+
+func TestBubblewrapStdoutStderr(t *testing.T) {
+	skipIfNoBubblewrap(t)
+
+	var stdout, stderr bytes.Buffer
+	params := newBubblewrapParams(t, "output", "stdout", "out-msg", "stderr", "err-msg")
+	params.Stdout = &stdout
+	params.Stderr = &stderr
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	assert.Equal(t, "out-msg\n", stdout.String())
+	assert.Equal(t, "err-msg\n", stderr.String())
+}
+
+func TestBubblewrapContextCancellation(t *testing.T) {
+	skipIfNoBubblewrap(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	params := newBubblewrapParams(t, "sleep", "30000")
+	params.Ctx = ctx
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+
+	done := make(chan error, 1)
+	go func() {
+		done <- r.Run()
+	}()
+
+	time.Sleep(200 * time.Millisecond)
+	cancel()
+
+	select {
+	case <-done:
+		// Run returned promptly after cancellation
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run() did not return within 5 seconds after context cancellation")
+	}
+}
+
+func TestBubblewrapSelectionPriority(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("runner selection test only relevant on Linux")
+	}
+
+	params := newTestParams(t)
+	params.Sandbox = true
+	params.BubblewrapParams = runner.BubblewrapParams{
+		BinaryPath: "/usr/bin/bwrap",
+	}
+	params.FirejailParams = runner.FirejailParams{
+		BinaryPath: "/usr/bin/firejail",
+	}
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+
+	// When both are configured, bubblewrap should be chosen
+	typeName := fmt.Sprintf("%T", r)
+	assert.Contains(t, typeName, "bubblewrap", "expected bubblewrap runner when both are configured")
 }
 
 func TestInvalidExecutable(t *testing.T) {

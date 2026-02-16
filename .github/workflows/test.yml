@@ -15,4 +15,6 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - if: runner.os == 'Linux'
+        run: sudo apt-get install -y bubblewrap
       - run: go test -v -race ./...
