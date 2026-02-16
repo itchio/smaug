@@ -19,14 +19,22 @@ Built for the [itch.io app](https://itch.io/itch) to launch game binaries, smaug
 
 ## Packages
 
-- **`runner`** — Core package containing `GetRunner()`, the `Runner` interface, platform-specific runner implementations (`firejailRunner`, `sandboxExecRunner`, `fujiRunner`, `simpleRunner`, `appRunner`), and process group management.
+- **`runner`** — Core package containing `GetRunner()`, the `Runner` interface, platform-specific runner implementations (`simpleRunner`, `firejailRunner`, `bubblewrapRunner`, `flatpakSpawnRunner`, `sandboxExecRunner`, `fujiRunner`, `appRunner`), and process group management.
 - **`fuji`** — Windows sandbox implementation using isolated user accounts. Creates a low-privilege `itch-player-XXXXX` user, manages credentials via the Windows registry, and handles folder sharing for each launch.
 
 ## Sandboxing
 
 ### Linux
 
-Uses [firejail](https://firejail.wordpress.com/). A profile is generated at `{InstallFolder}/.itch/isolate-app.profile` that blacklists sensitive directories (browser caches, itch/kitch config) and whitelists the game's install folder and temp directory. Per-game local overrides can be placed in `/etc/firejail/` (e.g. `itch_game_{name}.local`), and a global override file `itch_games_globals.local` is also included if present.
+Three sandbox backends are supported. `GetRunner()` selects one automatically when `Sandbox` is enabled:
+
+1. **Flatpak-spawn** — chosen when running inside a [Flatpak](https://flatpak.org/) environment (detected by the presence of `/.flatpak-info`). Uses `flatpak-spawn --sandbox` to create a sub-sandbox within the Flatpak container. Supports environment variable forwarding (`--env`), working directory (`--directory`), and optional network isolation (`--no-network`). The `--watch-bus` flag ties the sandboxed process lifetime to the caller's session bus.
+
+2. **Bubblewrap** — chosen when `BubblewrapParams.BinaryPath` is set (and not inside a Flatpak). Uses [bubblewrap](https://github.com/containers/bubblewrap) to create a lightweight user-namespace sandbox. Mounts system directories read-only, bind-mounts the game's install folder read-write, and forwards display/audio sockets (X11, Wayland, PulseAudio, PipeWire). Namespace isolation covers user, IPC, PID, and UTS; network access remains shared.
+
+3. **Firejail** — the fallback when neither of the above apply. Uses [firejail](https://firejail.wordpress.com/) with a generated profile at `{InstallFolder}/.itch/isolate-app.profile` that blacklists sensitive directories and whitelists the game's install folder and temp directory. Per-game local overrides can be placed in `/etc/firejail/` (e.g. `itch_game_{name}.local`), and a global override file `itch_games_globals.local` is also included if present.
+
+Selection priority: **Flatpak-spawn > Bubblewrap > Firejail**.
 
 ### macOS
 
