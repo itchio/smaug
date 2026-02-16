@@ -33,10 +33,11 @@ type RunnerParams struct {
 
 	// runner-specific params
 
-	FirejailParams   FirejailParams
-	BubblewrapParams BubblewrapParams
-	FujiParams       FujiParams
-	AttachParams     AttachParams
+	FirejailParams     FirejailParams
+	BubblewrapParams   BubblewrapParams
+	FlatpakSpawnParams FlatpakSpawnParams
+	FujiParams         FujiParams
+	AttachParams       AttachParams
 }
 
 type FirejailParams struct {
@@ -45,6 +46,11 @@ type FirejailParams struct {
 
 type BubblewrapParams struct {
 	BinaryPath string
+}
+
+type FlatpakSpawnParams struct {
+	// NoNetwork disables network access in the sandbox (--no-network flag)
+	NoNetwork bool
 }
 
 type FujiParams struct {
@@ -80,6 +86,9 @@ func GetRunner(params RunnerParams) (Runner, error) {
 		return newSimpleRunner(params)
 	case "linux":
 		if params.Sandbox {
+			if isInsideFlatpak() {
+				return newFlatpakSpawnRunner(params)
+			}
 			if params.BubblewrapParams.BinaryPath != "" {
 				return newBubblewrapRunner(params)
 			}

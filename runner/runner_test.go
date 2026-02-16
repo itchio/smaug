@@ -365,3 +365,82 @@ func TestInvalidExecutable(t *testing.T) {
 	}
 	require.Error(t, err, "expected an error for nonexistent executable")
 }
+
+func skipIfNotFlatpak(t *testing.T) {
+	t.Helper()
+	if runtime.GOOS != "linux" {
+		t.Skip("flatpak-spawn tests only run on Linux")
+	}
+	if _, err := os.Stat("/.flatpak-info"); err != nil {
+		t.Skip("not running inside a Flatpak environment")
+	}
+	if _, err := exec.LookPath("flatpak-spawn"); err != nil {
+		t.Skip("flatpak-spawn not found in PATH")
+	}
+}
+
+func newFlatpakSpawnParams(t *testing.T, args ...string) runner.RunnerParams {
+	t.Helper()
+	params := newTestParams(t, args...)
+	params.Sandbox = true
+	return params
+}
+
+func TestFlatpakSpawnBasicExecution(t *testing.T) {
+	skipIfNotFlatpak(t)
+
+	var stdout bytes.Buffer
+	params := newFlatpakSpawnParams(t, "echo", "hello")
+	params.Stdout = &stdout
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	assert.Equal(t, "hello\n", stdout.String())
+}
+
+func TestFlatpakSpawnEnvironmentVariables(t *testing.T) {
+	skipIfNotFlatpak(t)
+
+	var stdout bytes.Buffer
+	params := newFlatpakSpawnParams(t, "env", "TEST_VAR_A", "TEST_VAR_B")
+	params.Stdout = &stdout
+	params.Env = []string{
+		"TEST_VAR_A=alpha",
+		"TEST_VAR_B=beta",
+	}
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	lines := strings.Split(strings.TrimSpace(stdout.String()), "\n")
+	require.Len(t, lines, 2)
+	assert.Equal(t, "alpha", lines[0])
+	assert.Equal(t, "beta", lines[1])
+}
+
+func TestFlatpakSpawnSelectionInFlatpak(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("runner selection test only relevant on Linux")
+	}
+	if _, err := os.Stat("/.flatpak-info"); err != nil {
+		t.Skip("not running inside a Flatpak environment")
+	}
+
+	params := newTestParams(t)
+	params.Sandbox = true
+	// Even with bubblewrap configured, flatpak-spawn should be chosen inside Flatpak
+	params.BubblewrapParams = runner.BubblewrapParams{
+		BinaryPath: "/usr/bin/bwrap",
+	}
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+
+	typeName := fmt.Sprintf("%T", r)
+	assert.Contains(t, typeName, "flatpakSpawn", "expected flatpak-spawn runner when inside Flatpak")
+}
