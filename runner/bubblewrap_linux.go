@@ -85,6 +85,27 @@ func (br *bubblewrapRunner) Run() error {
 		args = append(args, "--ro-bind", "/tmp/.X11-unix", "/tmp/.X11-unix")
 	}
 
+	// X11 authentication
+	xauthority := envLookup(params.Env, "XAUTHORITY")
+	if xauthority == "" {
+		xauthority = os.Getenv("XAUTHORITY")
+	}
+	if xauthority == "" {
+		// Default location if XAUTHORITY is not set
+		if home := os.Getenv("HOME"); home != "" {
+			defaultPath := home + "/.Xauthority"
+			if _, err := os.Stat(defaultPath); err == nil {
+				xauthority = defaultPath
+			}
+		}
+	}
+	if xauthority != "" {
+		if _, err := os.Stat(xauthority); err == nil {
+			ensureSandboxParentDirs(&args, createdSandboxDirs, xauthority)
+			args = append(args, "--ro-bind", xauthority, xauthority)
+		}
+	}
+
 	if xdgRuntimeDir != "" {
 		// Wayland
 		waylandDisplay := envLookup(params.Env, "WAYLAND_DISPLAY")
@@ -126,7 +147,7 @@ func (br *bubblewrapRunner) Run() error {
 
 	// Environment passthrough
 	envVarsToForward := []string{
-		"DISPLAY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
+		"DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
 		"PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS",
 		"HOME", "USER", "LANG", "PATH",
 	}
