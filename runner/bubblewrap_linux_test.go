@@ -12,6 +12,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func bubblewrapSetenvValues(args []string, key string) []string {
+	out := make([]string, 0, 1)
+	for i := 0; i+2 < len(args); i++ {
+		if args[i] == "--setenv" && args[i+1] == key {
+			out = append(out, args[i+2])
+		}
+	}
+	return out
+}
+
 func TestEnsureSandboxParentDirs(t *testing.T) {
 	var args []string
 	seen := make(map[string]struct{})
@@ -102,8 +112,8 @@ func TestBubblewrapNoNetworkAddsUnshareNet(t *testing.T) {
 			Ctx:      context.Background(),
 			BubblewrapParams: BubblewrapParams{
 				BinaryPath: "/fake/bwrap",
-				NoNetwork:  true,
 			},
+			SandboxConfig:  SandboxConfig{NoNetwork: true},
 			FullTargetPath: "/bin/true",
 		},
 	}
@@ -131,7 +141,6 @@ func TestBubblewrapNoNetworkDisabledOmitsUnshareNet(t *testing.T) {
 			Ctx:      context.Background(),
 			BubblewrapParams: BubblewrapParams{
 				BinaryPath: "/fake/bwrap",
-				NoNetwork:  false,
 			},
 			FullTargetPath: "/bin/true",
 		},
@@ -139,4 +148,67 @@ func TestBubblewrapNoNetworkDisabledOmitsUnshareNet(t *testing.T) {
 
 	require.NoError(t, br.Run())
 	assert.NotContains(t, gotArgs, "--unshare-net")
+}
+
+func TestBubblewrapAllowlistEnvEmptyValueOverridesHost(t *testing.T) {
+	origCommand := bubblewrapCommand
+	t.Cleanup(func() {
+		bubblewrapCommand = origCommand
+	})
+
+	var gotArgs []string
+	bubblewrapCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	t.Setenv("LANG", "host-lang")
+
+	br := &bubblewrapRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			BubblewrapParams: BubblewrapParams{
+				BinaryPath: "/fake/bwrap",
+			},
+			Env:            []string{"LANG="},
+			FullTargetPath: "/bin/true",
+		},
+	}
+
+	require.NoError(t, br.Run())
+	assert.Equal(t, []string{""}, bubblewrapSetenvValues(gotArgs, "LANG"))
+}
+
+func TestBubblewrapAllowEnvEmptyValueOverridesHost(t *testing.T) {
+	origCommand := bubblewrapCommand
+	t.Cleanup(func() {
+		bubblewrapCommand = origCommand
+	})
+
+	var gotArgs []string
+	bubblewrapCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	t.Setenv("SMAUG_ALLOW_ENV_EMPTY", "host")
+
+	br := &bubblewrapRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			BubblewrapParams: BubblewrapParams{
+				BinaryPath: "/fake/bwrap",
+			},
+			Env: []string{"SMAUG_ALLOW_ENV_EMPTY="},
+			SandboxConfig: SandboxConfig{
+				AllowEnv: []string{"SMAUG_ALLOW_ENV_EMPTY"},
+			},
+			FullTargetPath: "/bin/true",
+		},
+	}
+
+	require.NoError(t, br.Run())
+	assert.Equal(t, []string{""}, bubblewrapSetenvValues(gotArgs, "SMAUG_ALLOW_ENV_EMPTY"))
 }

@@ -26,15 +26,27 @@ Built for the [itch.io app](https://itch.io/itch) to launch game binaries, smaug
 
 ### Linux
 
-Three sandbox backends are supported. `GetRunner()` selects one automatically when `Sandbox` is enabled:
+Three sandbox backends are supported when `Sandbox` is enabled.
+Shared sandbox settings are configured through `RunnerParams.SandboxConfig`:
+- `Type`: explicit backend (`"bubblewrap"`, `"firejail"`, `"flatpak"`) or auto (`""`)
+- `NoNetwork`: disable network access for the selected backend
+- `AllowEnv`: additional environment variable names to pass through from the host
 
-1. **Flatpak-spawn** — chosen when running inside a [Flatpak](https://flatpak.org/) environment (detected by the presence of `/.flatpak-info`). Uses `flatpak-spawn --sandbox` to create a sub-sandbox within the Flatpak container. Supports environment variable forwarding (`--env`), working directory (`--directory`), and optional network isolation (`--no-network`). The `--watch-bus` flag ties the sandboxed process lifetime to the caller's session bus.
+Sandbox backends:
 
-2. **Bubblewrap** — chosen when `BubblewrapParams.BinaryPath` is set (and not inside a Flatpak). Uses [bubblewrap](https://github.com/containers/bubblewrap) to create a lightweight user-namespace sandbox. Mounts system directories read-only, bind-mounts the game's install folder read-write, and forwards display/audio sockets (X11, Wayland, PulseAudio, PipeWire). Namespace isolation covers user, PID, and UTS; IPC stays shared for X11 MIT-SHM compatibility. Network access is shared by default, with optional isolation via `BubblewrapParams.NoNetwork`.
+1. **Flatpak-spawn** — uses `flatpak-spawn --sandbox` to create a sub-sandbox within the Flatpak container. Supports environment variable forwarding (`--env`), working directory (`--directory`), and optional network isolation via `SandboxConfig.NoNetwork` (`--no-network`). The `--watch-bus` flag ties the sandboxed process lifetime to the caller's session bus.
 
-3. **Firejail** — the fallback when neither of the above apply. Uses [firejail](https://firejail.wordpress.com/) with a generated profile at `{InstallFolder}/.itch/isolate-app.profile` that blacklists sensitive directories and whitelists the game's install folder and temp directory. Environment forwarding follows the same allowlist baseline as bubblewrap (including itch launch vars and temp vars), and network access can be disabled with `FirejailParams.NoNetwork`. Per-game local overrides can be placed in `/etc/firejail/` (e.g. `itch_game_{name}.local`), and a global override file `itch_games_globals.local` is also included if present.
+2. **Bubblewrap** — uses [bubblewrap](https://github.com/containers/bubblewrap) to create a lightweight user-namespace sandbox. Mounts system directories read-only, bind-mounts the game's install folder read-write, and forwards display/audio sockets (X11, Wayland, PulseAudio, PipeWire). Namespace isolation covers user, PID, and UTS; IPC stays shared for X11 MIT-SHM compatibility. Network access is shared by default, with optional isolation via `SandboxConfig.NoNetwork`.
 
-Selection priority: **Flatpak-spawn > Bubblewrap > Firejail**.
+3. **Firejail** — uses [firejail](https://firejail.wordpress.com/) with a generated profile at `{InstallFolder}/.itch/isolate-app.profile` that blacklists sensitive directories and whitelists the game's install folder and temp directory. Environment forwarding follows the same allowlist baseline as bubblewrap (including itch launch vars and temp vars), supports additional passthrough via `SandboxConfig.AllowEnv`, and network access can be disabled with `SandboxConfig.NoNetwork`. Per-game local overrides can be placed in `/etc/firejail/` (e.g. `itch_game_{name}.local`), and a global override file `itch_games_globals.local` is also included if present.
+
+Backend selection:
+- Explicit selection: set `SandboxConfig.Type` to `"flatpak"`, `"bubblewrap"`, or `"firejail"`.
+- Auto selection: leave `SandboxConfig.Type` empty (`""`).
+- Linux auto priority: **Flatpak-spawn > Bubblewrap > Firejail**.
+- Linux auto rule: choose Flatpak-spawn when running inside a [Flatpak](https://flatpak.org/) environment (`/.flatpak-info` present).
+- Linux auto rule: choose Bubblewrap when `BubblewrapParams.BinaryPath` is configured.
+- Linux auto rule: choose Firejail otherwise.
 
 ### macOS
 

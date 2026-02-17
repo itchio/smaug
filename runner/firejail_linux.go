@@ -68,7 +68,7 @@ func (fr *firejailRunner) Run() error {
 
 	var args []string
 	args = append(args, fmt.Sprintf("--profile=%s", sandboxProfilePath))
-	if params.FirejailParams.NoNetwork {
+	if params.SandboxConfig.NoNetwork {
 		args = append(args, "--net=none")
 	}
 	args = append(args, "--")
@@ -77,7 +77,7 @@ func (fr *firejailRunner) Run() error {
 
 	cmd := firejailCommand(firejailPath, args...)
 	cmd.Dir = params.Dir
-	cmd.Env = collectAllowedEnv(params.Env, os.Environ())
+	cmd.Env = collectAllowedEnv(params.Env, os.Environ(), params.SandboxConfig.AllowEnv)
 	cmd.Stdout = params.Stdout
 	cmd.Stderr = params.Stderr
 

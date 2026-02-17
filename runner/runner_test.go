@@ -413,6 +413,20 @@ func TestBubblewrapSelectionPriority(t *testing.T) {
 	assert.Contains(t, typeName, "bubblewrap", "expected bubblewrap runner when both are configured")
 }
 
+func TestUnsupportedSandboxTypeOnLinuxReturnsError(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("runner selection test only relevant on Linux")
+	}
+
+	params := newTestParams(t)
+	params.Sandbox = true
+	params.SandboxConfig.Type = runner.SandboxType("invalid")
+
+	_, err := runner.GetRunner(params)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not supported on linux")
+}
+
 func TestInvalidExecutable(t *testing.T) {
 	consumer := newTestConsumer(t)
 	params := runner.RunnerParams{

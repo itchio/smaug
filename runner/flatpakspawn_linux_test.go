@@ -62,3 +62,94 @@ func TestFlatpakSpawnRunnerUsesHostEnvForWrapper(t *testing.T) {
 	assert.Equal(t, "/fake/flatpak-spawn", gotName)
 	assert.Contains(t, gotArgs, "--env=SMAUG_FLATPAK_WRAPPER_ENV=child")
 }
+
+func TestFlatpakSpawnAllowEnvPrefersParamsEnv(t *testing.T) {
+	origCommand := flatpakSpawnCommand
+	t.Cleanup(func() {
+		flatpakSpawnCommand = origCommand
+	})
+
+	var gotArgs []string
+	flatpakSpawnCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	t.Setenv("SMAUG_ALLOW_ENV_SHARED", "host")
+
+	fr := &flatpakSpawnRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			Env:      []string{"SMAUG_ALLOW_ENV_SHARED=params"},
+			SandboxConfig: SandboxConfig{
+				AllowEnv: []string{"SMAUG_ALLOW_ENV_SHARED"},
+			},
+		},
+		binaryPath: "/fake/flatpak-spawn",
+	}
+
+	require.NoError(t, fr.Run())
+	assert.Contains(t, gotArgs, "--env=SMAUG_ALLOW_ENV_SHARED=params")
+	assert.NotContains(t, gotArgs, "--env=SMAUG_ALLOW_ENV_SHARED=host")
+}
+
+func TestFlatpakSpawnAllowEnvFallsBackToHost(t *testing.T) {
+	origCommand := flatpakSpawnCommand
+	t.Cleanup(func() {
+		flatpakSpawnCommand = origCommand
+	})
+
+	var gotArgs []string
+	flatpakSpawnCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	t.Setenv("SMAUG_ALLOW_ENV_HOST_ONLY", "host")
+
+	fr := &flatpakSpawnRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			SandboxConfig: SandboxConfig{
+				AllowEnv: []string{"SMAUG_ALLOW_ENV_HOST_ONLY"},
+			},
+		},
+		binaryPath: "/fake/flatpak-spawn",
+	}
+
+	require.NoError(t, fr.Run())
+	assert.Contains(t, gotArgs, "--env=SMAUG_ALLOW_ENV_HOST_ONLY=host")
+}
+
+func TestFlatpakSpawnAllowEnvEmptyValueSuppressesHost(t *testing.T) {
+	origCommand := flatpakSpawnCommand
+	t.Cleanup(func() {
+		flatpakSpawnCommand = origCommand
+	})
+
+	var gotArgs []string
+	flatpakSpawnCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	t.Setenv("SMAUG_ALLOW_ENV_EMPTY", "host")
+
+	fr := &flatpakSpawnRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			Env:      []string{"SMAUG_ALLOW_ENV_EMPTY="},
+			SandboxConfig: SandboxConfig{
+				AllowEnv: []string{"SMAUG_ALLOW_ENV_EMPTY"},
+			},
+		},
+		binaryPath: "/fake/flatpak-spawn",
+	}
+
+	require.NoError(t, fr.Run())
+	assert.Contains(t, gotArgs, "--env=SMAUG_ALLOW_ENV_EMPTY=")
+	assert.NotContains(t, gotArgs, "--env=SMAUG_ALLOW_ENV_EMPTY=host")
+}

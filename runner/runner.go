@@ -31,6 +31,8 @@ type RunnerParams struct {
 	TempDir       string
 	Runtime       ox.Runtime
 
+	SandboxConfig SandboxConfig
+
 	// runner-specific params
 
 	FirejailParams     FirejailParams
@@ -40,21 +42,36 @@ type RunnerParams struct {
 	AttachParams       AttachParams
 }
 
+type SandboxType string
+
+const (
+	SandboxTypeAuto       SandboxType = ""
+	SandboxTypeBubblewrap SandboxType = "bubblewrap"
+	SandboxTypeFirejail   SandboxType = "firejail"
+	SandboxTypeFlatpak    SandboxType = "flatpak"
+	SandboxTypeFuji       SandboxType = "fuji"
+)
+
+type SandboxConfig struct {
+	// Which sandbox runner to use. Empty means auto-detect (default).
+	Type SandboxType
+
+	// If true, disable network access within the sandbox.
+	NoNetwork bool
+
+	// Environment variable names to allow through from the host into the sandbox.
+	AllowEnv []string
+}
+
 type FirejailParams struct {
 	BinaryPath string
-	// NoNetwork disables network access in the sandbox (--net=none flag)
-	NoNetwork bool
 }
 
 type BubblewrapParams struct {
 	BinaryPath string
-	// NoNetwork disables network access in the sandbox (--unshare-net flag)
-	NoNetwork bool
 }
 
 type FlatpakSpawnParams struct {
-	// NoNetwork disables network access in the sandbox (--no-network flag)
-	NoNetwork bool
 }
 
 type FujiParams struct {
@@ -85,23 +102,44 @@ func GetRunner(params RunnerParams) (Runner, error) {
 	switch runtime.GOOS {
 	case "windows":
 		if params.Sandbox {
-			return newFujiRunner(params)
+			switch params.SandboxConfig.Type {
+			case SandboxTypeAuto, SandboxTypeFuji:
+				return newFujiRunner(params)
+			default:
+				return nil, fmt.Errorf("sandbox type %q is not supported on windows", params.SandboxConfig.Type)
+			}
 		}
 		return newSimpleRunner(params)
 	case "linux":
 		if params.Sandbox {
-			if isInsideFlatpak() {
-				return newFlatpakSpawnRunner(params)
-			}
-			if params.BubblewrapParams.BinaryPath != "" {
+			switch params.SandboxConfig.Type {
+			case SandboxTypeAuto:
+				if isInsideFlatpak() {
+					return newFlatpakSpawnRunner(params)
+				}
+				if params.BubblewrapParams.BinaryPath != "" {
+					return newBubblewrapRunner(params)
+				}
+				return newFirejailRunner(params)
+			case SandboxTypeBubblewrap:
 				return newBubblewrapRunner(params)
+			case SandboxTypeFirejail:
+				return newFirejailRunner(params)
+			case SandboxTypeFlatpak:
+				return newFlatpakSpawnRunner(params)
+			default:
+				return nil, fmt.Errorf("sandbox type %q is not supported on linux", params.SandboxConfig.Type)
 			}
-			return newFirejailRunner(params)
 		}
 		return newSimpleRunner(params)
 	case "darwin":
 		if params.Sandbox {
-			return newSandboxExecRunner(params)
+			switch params.SandboxConfig.Type {
+			case SandboxTypeAuto:
+				return newSandboxExecRunner(params)
+			default:
+				return nil, fmt.Errorf("sandbox type %q is not supported on macOS", params.SandboxConfig.Type)
+			}
 		}
 		return newAppRunner(params)
 	}

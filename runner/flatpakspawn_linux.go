@@ -47,7 +47,7 @@ func (fr *flatpakSpawnRunner) Run() error {
 	var args []string
 	args = append(args, "--sandbox")
 
-	if params.FlatpakSpawnParams.NoNetwork {
+	if params.SandboxConfig.NoNetwork {
 		args = append(args, "--no-network")
 	}
 
@@ -57,6 +57,14 @@ func (fr *flatpakSpawnRunner) Run() error {
 	// Environment variables
 	for _, e := range params.Env {
 		args = append(args, "--env="+e)
+	}
+	for _, key := range params.SandboxConfig.AllowEnv {
+		if _, found := envLookupWithPresence(params.Env, key); found {
+			continue
+		}
+		if val := os.Getenv(key); val != "" {
+			args = append(args, "--env="+key+"="+val)
+		}
 	}
 
 	// Working directory

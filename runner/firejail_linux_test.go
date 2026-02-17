@@ -37,8 +37,8 @@ func newFirejailTestRunner(t *testing.T, noNetwork bool) *firejailRunner {
 			TempDir:        t.TempDir(),
 			FirejailParams: FirejailParams{
 				BinaryPath: "/fake/firejail",
-				NoNetwork:  noNetwork,
 			},
+			SandboxConfig: SandboxConfig{NoNetwork: noNetwork},
 		},
 	}
 }

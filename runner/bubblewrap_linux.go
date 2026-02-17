@@ -180,7 +180,7 @@ func (br *bubblewrapRunner) Run() error {
 	// - keep IPC shared for X11 MIT-SHM compatibility
 	// - optionally isolate network when NoNetwork is requested
 	args = append(args, "--unshare-user")
-	if params.BubblewrapParams.NoNetwork {
+	if params.SandboxConfig.NoNetwork {
 		args = append(args, "--unshare-net")
 	}
 	args = append(args, "--unshare-pid")
@@ -195,7 +195,14 @@ func (br *bubblewrapRunner) Run() error {
 
 	// Environment passthrough
 	for _, key := range SandboxEnvAllowlist() {
-		if val := envLookup(params.Env, key); val != "" {
+		if val, found := envLookupWithPresence(params.Env, key); found {
+			args = append(args, "--setenv", key, val)
+		} else if val := os.Getenv(key); val != "" {
+			args = append(args, "--setenv", key, val)
+		}
+	}
+	for _, key := range params.SandboxConfig.AllowEnv {
+		if val, found := envLookupWithPresence(params.Env, key); found {
 			args = append(args, "--setenv", key, val)
 		} else if val := os.Getenv(key); val != "" {
 			args = append(args, "--setenv", key, val)
@@ -239,17 +246,6 @@ func (br *bubblewrapRunner) Run() error {
 	}
 
 	return nil
-}
-
-// envLookup looks up a key in a []string{"KEY=VALUE", ...} slice.
-func envLookup(env []string, key string) string {
-	prefix := key + "="
-	for _, e := range env {
-		if strings.HasPrefix(e, prefix) {
-			return e[len(prefix):]
-		}
-	}
-	return ""
 }
 
 func ensureSandboxParentDirs(args *[]string, seen map[string]struct{}, path string) {
