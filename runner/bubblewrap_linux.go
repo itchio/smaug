@@ -38,7 +38,11 @@ func (br *bubblewrapRunner) Run() error {
 	consumer := params.Consumer
 
 	bwrapPath := params.BubblewrapParams.BinaryPath
-	consumer.Opf("Running (%s) through bubblewrap", params.FullTargetPath)
+	msg := fmt.Sprintf("Running (%s) through bubblewrap", params.FullTargetPath)
+	if params.SandboxConfig.NoNetwork {
+		msg += " (networking disabled)"
+	}
+	consumer.Opf("%s", msg)
 
 	var args []string
 

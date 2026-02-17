@@ -64,7 +64,11 @@ func (fr *firejailRunner) Run() error {
 		return fmt.Errorf("%w", err)
 	}
 
-	consumer.Opf("Running (%s) through firejail", params.FullTargetPath)
+	msg := fmt.Sprintf("Running (%s) through firejail", params.FullTargetPath)
+	if params.SandboxConfig.NoNetwork {
+		msg += " (networking disabled)"
+	}
+	consumer.Opf("%s", msg)
 
 	var args []string
 	args = append(args, fmt.Sprintf("--profile=%s", sandboxProfilePath))

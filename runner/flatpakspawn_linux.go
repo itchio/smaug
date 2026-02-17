@@ -42,7 +42,11 @@ func (fr *flatpakSpawnRunner) Run() error {
 	params := fr.params
 	consumer := params.Consumer
 
-	consumer.Opf("Running (%s) through flatpak-spawn --sandbox", params.FullTargetPath)
+	msg := fmt.Sprintf("Running (%s) through flatpak-spawn --sandbox", params.FullTargetPath)
+	if params.SandboxConfig.NoNetwork {
+		msg += " (networking disabled)"
+	}
+	consumer.Opf("%s", msg)
 
 	var args []string
 	args = append(args, "--sandbox")
