@@ -17,6 +17,7 @@ type firejailRunner struct {
 }
 
 var _ Runner = (*firejailRunner)(nil)
+var firejailCommand = exec.Command
 
 func newFirejailRunner(params RunnerParams) (Runner, error) {
 	if params.FirejailParams.BinaryPath == "" {
@@ -67,13 +68,16 @@ func (fr *firejailRunner) Run() error {
 
 	var args []string
 	args = append(args, fmt.Sprintf("--profile=%s", sandboxProfilePath))
+	if params.FirejailParams.NoNetwork {
+		args = append(args, "--net=none")
+	}
 	args = append(args, "--")
 	args = append(args, params.FullTargetPath)
 	args = append(args, params.Args...)
 
-	cmd := exec.Command(firejailPath, args...)
+	cmd := firejailCommand(firejailPath, args...)
 	cmd.Dir = params.Dir
-	cmd.Env = params.Env
+	cmd.Env = collectAllowedEnv(params.Env, os.Environ())
 	cmd.Stdout = params.Stdout
 	cmd.Stderr = params.Stderr
 

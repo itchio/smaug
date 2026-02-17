@@ -194,14 +194,7 @@ func (br *bubblewrapRunner) Run() error {
 	args = append(args, "--clearenv")
 
 	// Environment passthrough
-	envVarsToForward := []string{
-		"DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
-		"PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS",
-		"HOME", "USER", "LANG", "PATH",
-		"TMP", "TEMP", "TMPDIR",
-	}
-	envVarsToForward = append(envVarsToForward, ItchioLaunchEnvVars...)
-	for _, key := range envVarsToForward {
+	for _, key := range SandboxEnvAllowlist() {
 		if val := envLookup(params.Env, key); val != "" {
 			args = append(args, "--setenv", key, val)
 		} else if val := os.Getenv(key); val != "" {

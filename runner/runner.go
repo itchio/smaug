@@ -42,6 +42,8 @@ type RunnerParams struct {
 
 type FirejailParams struct {
 	BinaryPath string
+	// NoNetwork disables network access in the sandbox (--net=none flag)
+	NoNetwork bool
 }
 
 type BubblewrapParams struct {
