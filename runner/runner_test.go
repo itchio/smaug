@@ -318,6 +318,49 @@ func TestBubblewrapClearsUnlistedEnvironmentVariables(t *testing.T) {
 	assert.Equal(t, "sandbox-user", lines[1], "allowlisted env var should be forwarded")
 }
 
+func TestBubblewrapForwardsItchioAndTempEnvironmentVariables(t *testing.T) {
+	bwrapPath := skipIfNoBubblewrap(t)
+
+	var stdout bytes.Buffer
+	params := newBubblewrapParams(
+		t,
+		bwrapPath,
+		"env",
+		"ITCHIO_API_KEY",
+		"ITCHIO_API_KEY_EXPIRES_AT",
+		"ITCHIO_OFFLINE_MODE",
+		"ITCHIO_SANDBOX",
+		"TMP",
+		"TEMP",
+		"TMPDIR",
+	)
+	params.Stdout = &stdout
+	params.Env = []string{
+		"ITCHIO_API_KEY=subkey-123",
+		"ITCHIO_API_KEY_EXPIRES_AT=1735689600",
+		"ITCHIO_OFFLINE_MODE=1",
+		"ITCHIO_SANDBOX=1",
+		"TMP=/game/.itch/temp",
+		"TEMP=/game/.itch/temp",
+		"TMPDIR=/game/.itch/temp",
+	}
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	lines := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\n")
+	require.Len(t, lines, 7)
+	assert.Equal(t, "subkey-123", lines[0])
+	assert.Equal(t, "1735689600", lines[1])
+	assert.Equal(t, "1", lines[2])
+	assert.Equal(t, "1", lines[3])
+	assert.Equal(t, "/game/.itch/temp", lines[4])
+	assert.Equal(t, "/game/.itch/temp", lines[5])
+	assert.Equal(t, "/game/.itch/temp", lines[6])
+}
+
 func TestBubblewrapContextCancellation(t *testing.T) {
 	bwrapPath := skipIfNoBubblewrap(t)
 

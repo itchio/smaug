@@ -192,7 +192,9 @@ func (br *bubblewrapRunner) Run() error {
 		"DISPLAY", "XAUTHORITY", "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR",
 		"PULSE_SERVER", "DBUS_SESSION_BUS_ADDRESS",
 		"HOME", "USER", "LANG", "PATH",
+		"TMP", "TEMP", "TMPDIR",
 	}
+	envVarsToForward = append(envVarsToForward, ItchioLaunchEnvVars...)
 	for _, key := range envVarsToForward {
 		if val := envLookup(params.Env, key); val != "" {
 			args = append(args, "--setenv", key, val)
