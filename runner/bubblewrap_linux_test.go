@@ -3,9 +3,13 @@
 package runner
 
 import (
+	"context"
+	"os/exec"
 	"testing"
 
+	"github.com/itchio/headway/state"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEnsureSandboxParentDirs(t *testing.T) {
@@ -76,4 +80,63 @@ func TestParseDbusSocketPath(t *testing.T) {
 			assert.Equal(t, tc.want, parseDbusSocketPath(tc.address))
 		})
 	}
+}
+
+func TestBubblewrapNoNetworkAddsUnshareNet(t *testing.T) {
+	origCommand := bubblewrapCommand
+	t.Cleanup(func() {
+		bubblewrapCommand = origCommand
+	})
+
+	var gotName string
+	var gotArgs []string
+	bubblewrapCommand = func(name string, args ...string) *exec.Cmd {
+		gotName = name
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	br := &bubblewrapRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			BubblewrapParams: BubblewrapParams{
+				BinaryPath: "/fake/bwrap",
+				NoNetwork:  true,
+			},
+			FullTargetPath: "/bin/true",
+		},
+	}
+
+	require.NoError(t, br.Run())
+	assert.Equal(t, "/fake/bwrap", gotName)
+	assert.Contains(t, gotArgs, "--unshare-net")
+}
+
+func TestBubblewrapNoNetworkDisabledOmitsUnshareNet(t *testing.T) {
+	origCommand := bubblewrapCommand
+	t.Cleanup(func() {
+		bubblewrapCommand = origCommand
+	})
+
+	var gotArgs []string
+	bubblewrapCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	br := &bubblewrapRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			BubblewrapParams: BubblewrapParams{
+				BinaryPath: "/fake/bwrap",
+				NoNetwork:  false,
+			},
+			FullTargetPath: "/bin/true",
+		},
+	}
+
+	require.NoError(t, br.Run())
+	assert.NotContains(t, gotArgs, "--unshare-net")
 }

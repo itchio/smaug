@@ -15,6 +15,7 @@ type bubblewrapRunner struct {
 }
 
 var _ Runner = (*bubblewrapRunner)(nil)
+var bubblewrapCommand = exec.Command
 
 func newBubblewrapRunner(params RunnerParams) (Runner, error) {
 	if params.BubblewrapParams.BinaryPath == "" {
@@ -175,8 +176,13 @@ func (br *bubblewrapRunner) Run() error {
 		}
 	}
 
-	// Namespace isolation (keep network and IPC shared for X11 MIT-SHM compatibility)
+	// Namespace isolation:
+	// - keep IPC shared for X11 MIT-SHM compatibility
+	// - optionally isolate network when NoNetwork is requested
 	args = append(args, "--unshare-user")
+	if params.BubblewrapParams.NoNetwork {
+		args = append(args, "--unshare-net")
+	}
 	args = append(args, "--unshare-pid")
 	args = append(args, "--unshare-uts")
 
@@ -213,7 +219,7 @@ func (br *bubblewrapRunner) Run() error {
 	args = append(args, params.FullTargetPath)
 	args = append(args, params.Args...)
 
-	cmd := exec.Command(bwrapPath, args...)
+	cmd := bubblewrapCommand(bwrapPath, args...)
 	cmd.Dir = params.Dir
 	cmd.Env = params.Env
 	cmd.Stdout = params.Stdout

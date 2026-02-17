@@ -46,6 +46,8 @@ type FirejailParams struct {
 
 type BubblewrapParams struct {
 	BinaryPath string
+	// NoNetwork disables network access in the sandbox (--unshare-net flag)
+	NoNetwork bool
 }
 
 type FlatpakSpawnParams struct {
