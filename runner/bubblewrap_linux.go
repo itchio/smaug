@@ -79,6 +79,23 @@ func (br *bubblewrapRunner) Run() error {
 		args = append(args, "--dev-bind", "/dev/snd", "/dev/snd")
 	}
 
+	createdSandboxDirs := make(map[string]struct{})
+
+	// Give sandboxed apps a persistent per-game home directory.
+	homeTarget, hasHome := envLookupWithPresence(params.Env, "HOME")
+	if !hasHome {
+		homeTarget = os.Getenv("HOME")
+	}
+	if params.InstallFolder != "" && filepath.IsAbs(homeTarget) {
+		homeSource := filepath.Join(params.InstallFolder, ".itch", "home")
+		if err := os.MkdirAll(homeSource, 0o755); err != nil {
+			consumer.Warnf("Could not make sandbox home directory (%s): %s", homeSource, err.Error())
+		} else {
+			ensureSandboxParentDirs(&args, createdSandboxDirs, homeTarget)
+			args = append(args, "--bind", homeSource, homeTarget)
+		}
+	}
+
 	// Game install folder (read-write)
 	if params.InstallFolder != "" {
 		args = append(args, "--bind", params.InstallFolder, params.InstallFolder)
@@ -99,7 +116,6 @@ func (br *bubblewrapRunner) Run() error {
 	if xdgRuntimeDir == "" {
 		xdgRuntimeDir = os.Getenv("XDG_RUNTIME_DIR")
 	}
-	createdSandboxDirs := make(map[string]struct{})
 
 	// X11
 	if _, err := os.Stat("/tmp/.X11-unix"); err == nil {

@@ -5,6 +5,7 @@ package runner
 import (
 	"context"
 	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/itchio/headway/state"
@@ -20,6 +21,24 @@ func bubblewrapSetenvValues(args []string, key string) []string {
 		}
 	}
 	return out
+}
+
+func bubblewrapHasBind(args []string, source string, target string) bool {
+	for i := 0; i+2 < len(args); i++ {
+		if args[i] == "--bind" && args[i+1] == source && args[i+2] == target {
+			return true
+		}
+	}
+	return false
+}
+
+func bubblewrapBindIndex(args []string, source string, target string) int {
+	for i := 0; i+2 < len(args); i++ {
+		if args[i] == "--bind" && args[i+1] == source && args[i+2] == target {
+			return i
+		}
+	}
+	return -1
 }
 
 func TestEnsureSandboxParentDirs(t *testing.T) {
@@ -211,4 +230,76 @@ func TestBubblewrapAllowEnvEmptyValueOverridesHost(t *testing.T) {
 
 	require.NoError(t, br.Run())
 	assert.Equal(t, []string{""}, bubblewrapSetenvValues(gotArgs, "SMAUG_ALLOW_ENV_EMPTY"))
+}
+
+func TestBubblewrapMountsPersistentSandboxHome(t *testing.T) {
+	origCommand := bubblewrapCommand
+	t.Cleanup(func() {
+		bubblewrapCommand = origCommand
+	})
+
+	var gotArgs []string
+	bubblewrapCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	installFolder := t.TempDir()
+	homeTarget := "/home/sandbox-user"
+	homeSource := filepath.Join(installFolder, ".itch", "home")
+
+	br := &bubblewrapRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			BubblewrapParams: BubblewrapParams{
+				BinaryPath: "/fake/bwrap",
+			},
+			InstallFolder:  installFolder,
+			Env:            []string{"HOME=" + homeTarget},
+			FullTargetPath: "/bin/true",
+		},
+	}
+
+	require.NoError(t, br.Run())
+	assert.DirExists(t, homeSource)
+	assert.True(t, bubblewrapHasBind(gotArgs, homeSource, homeTarget))
+}
+
+func TestBubblewrapInstallBindComesAfterSandboxHomeBind(t *testing.T) {
+	origCommand := bubblewrapCommand
+	t.Cleanup(func() {
+		bubblewrapCommand = origCommand
+	})
+
+	var gotArgs []string
+	bubblewrapCommand = func(name string, args ...string) *exec.Cmd {
+		gotArgs = append([]string{}, args...)
+		return exec.Command("sh", "-c", "true")
+	}
+
+	installFolder := "/home/leafo/.config/kitch/apps/sample-evil-app 2"
+	homeTarget := "/home/leafo"
+	homeSource := filepath.Join(installFolder, ".itch", "home")
+
+	br := &bubblewrapRunner{
+		params: RunnerParams{
+			Consumer: &state.Consumer{OnMessage: func(string, string) {}},
+			Ctx:      context.Background(),
+			BubblewrapParams: BubblewrapParams{
+				BinaryPath: "/fake/bwrap",
+			},
+			InstallFolder:  installFolder,
+			Env:            []string{"HOME=" + homeTarget},
+			FullTargetPath: "/bin/true",
+		},
+	}
+
+	require.NoError(t, br.Run())
+
+	homeBind := bubblewrapBindIndex(gotArgs, homeSource, homeTarget)
+	installBind := bubblewrapBindIndex(gotArgs, installFolder, installFolder)
+	require.NotEqual(t, -1, homeBind)
+	require.NotEqual(t, -1, installBind)
+	assert.Less(t, homeBind, installBind)
 }
