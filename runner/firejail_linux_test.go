@@ -5,7 +5,9 @@ package runner
 import (
 	"bytes"
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -148,4 +150,28 @@ func TestFirejailEnvironmentPrefersParamsAndFallsBackToHost(t *testing.T) {
 	gotEnv := parseEnvironmentOutput(stdout.String())
 	assert.Equal(t, "params-user", gotEnv["USER"])
 	assert.Equal(t, "host-lang", gotEnv["LANG"])
+}
+
+func TestFirejailProfileBlacklistsSensitivePaths(t *testing.T) {
+	origCommand := firejailCommand
+	t.Cleanup(func() {
+		firejailCommand = origCommand
+	})
+
+	firejailCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "true")
+	}
+
+	fr := newFirejailTestRunner(t, false)
+	require.NoError(t, fr.Run())
+
+	profilePath := filepath.Join(fr.params.InstallFolder, ".itch", "isolate-app.profile")
+	profileBytes, err := os.ReadFile(profilePath)
+	require.NoError(t, err)
+	profileText := string(profileBytes)
+
+	assert.Contains(t, profileText, "blacklist ${HOME}/.ssh")
+	assert.Contains(t, profileText, "blacklist ${HOME}/.gnupg")
+	assert.Contains(t, profileText, "blacklist ${HOME}/.aws")
+	assert.Contains(t, profileText, "blacklist ${HOME}/.config/google-chrome")
 }

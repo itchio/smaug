@@ -20,7 +20,20 @@ noblacklist ${HOME}/.config/kitch/apps
 blacklist   ${HOME}/.config/kitch/*
 blacklist   ${HOME}/.config/kitch/apps/*
 
-blacklist ~/.config/chromium
-blacklist ~/.config/chrome
-blacklist ~/.mozilla
+blacklist ${HOME}/.config/chromium
+blacklist ${HOME}/.config/chrome
+blacklist ${HOME}/.config/google-chrome
+blacklist ${HOME}/.config/BraveSoftware
+blacklist ${HOME}/.config/vivaldi
+blacklist ${HOME}/.config/microsoft-edge
+blacklist ${HOME}/.mozilla
+blacklist ${HOME}/.ssh
+blacklist ${HOME}/.gnupg
+blacklist ${HOME}/.aws
+blacklist ${HOME}/.kube
+blacklist ${HOME}/.pki
+blacklist ${HOME}/.git-credentials
+blacklist ${HOME}/.netrc
+blacklist ${HOME}/.password-store
+blacklist ${HOME}/.local/share/keyrings
 `
