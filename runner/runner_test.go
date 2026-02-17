@@ -296,6 +296,28 @@ func TestBubblewrapStdoutStderr(t *testing.T) {
 	assert.Equal(t, "err-msg\n", stderr.String())
 }
 
+func TestBubblewrapClearsUnlistedEnvironmentVariables(t *testing.T) {
+	bwrapPath := skipIfNoBubblewrap(t)
+
+	var stdout bytes.Buffer
+	params := newBubblewrapParams(t, bwrapPath, "env", "OPENAI_API_KEY", "USER")
+	params.Stdout = &stdout
+	params.Env = []string{
+		"OPENAI_API_KEY=super-secret",
+		"USER=sandbox-user",
+	}
+
+	r, err := runner.GetRunner(params)
+	require.NoError(t, err)
+	require.NoError(t, r.Prepare())
+	require.NoError(t, r.Run())
+
+	lines := strings.Split(strings.TrimSuffix(stdout.String(), "\n"), "\n")
+	require.Len(t, lines, 2)
+	assert.Equal(t, "", lines[0], "unlisted env var should be cleared by bubblewrap")
+	assert.Equal(t, "sandbox-user", lines[1], "allowlisted env var should be forwarded")
+}
+
 func TestBubblewrapContextCancellation(t *testing.T) {
 	bwrapPath := skipIfNoBubblewrap(t)
 

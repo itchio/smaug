@@ -47,6 +47,9 @@ func (br *bubblewrapRunner) Run() error {
 			args = append(args, "--ro-bind", dir, dir)
 		}
 	}
+	if _, err := os.Stat("/sys"); err == nil {
+		args = append(args, "--ro-bind", "/sys", "/sys")
+	}
 
 	// Basic filesystem
 	args = append(args, "--proc", "/proc")
@@ -56,6 +59,23 @@ func (br *bubblewrapRunner) Run() error {
 	// GPU access
 	if _, err := os.Stat("/dev/dri"); err == nil {
 		args = append(args, "--dev-bind", "/dev/dri", "/dev/dri")
+	}
+	if nvidiaPaths, err := filepath.Glob("/dev/nvidia*"); err == nil {
+		for _, nvidiaPath := range nvidiaPaths {
+			if _, err := os.Stat(nvidiaPath); err == nil {
+				args = append(args, "--dev-bind", nvidiaPath, nvidiaPath)
+			}
+		}
+	}
+
+	// Controller input devices
+	if _, err := os.Stat("/dev/input"); err == nil {
+		args = append(args, "--dev-bind", "/dev/input", "/dev/input")
+	}
+
+	// ALSA devices
+	if _, err := os.Stat("/dev/snd"); err == nil {
+		args = append(args, "--dev-bind", "/dev/snd", "/dev/snd")
 	}
 
 	// Game install folder (read-write)
@@ -135,15 +155,37 @@ func (br *bubblewrapRunner) Run() error {
 		}
 	}
 
-	// Namespace isolation (keep network shared)
+	// D-Bus session socket
+	dbusAddress := envLookup(params.Env, "DBUS_SESSION_BUS_ADDRESS")
+	if dbusAddress == "" {
+		dbusAddress = os.Getenv("DBUS_SESSION_BUS_ADDRESS")
+	}
+	dbusSocketPath := parseDbusSocketPath(dbusAddress)
+	if dbusSocketPath == "" && dbusAddress != "" && strings.Contains(dbusAddress, "unix:abstract=") {
+		// Abstract sockets do not map to filesystem paths and do not need mounts.
+	} else {
+		if dbusSocketPath == "" && xdgRuntimeDir != "" {
+			dbusSocketPath = filepath.Join(xdgRuntimeDir, "bus")
+		}
+		if dbusSocketPath != "" {
+			if _, err := os.Stat(dbusSocketPath); err == nil {
+				ensureSandboxParentDirs(&args, createdSandboxDirs, dbusSocketPath)
+				args = append(args, "--ro-bind", dbusSocketPath, dbusSocketPath)
+			}
+		}
+	}
+
+	// Namespace isolation (keep network and IPC shared for X11 MIT-SHM compatibility)
 	args = append(args, "--unshare-user")
-	args = append(args, "--unshare-ipc")
 	args = append(args, "--unshare-pid")
 	args = append(args, "--unshare-uts")
 
 	// Lifecycle
 	args = append(args, "--die-with-parent")
 	args = append(args, "--new-session")
+
+	// Start from an empty environment, then pass through only required vars.
+	args = append(args, "--clearenv")
 
 	// Environment passthrough
 	envVarsToForward := []string{
@@ -232,4 +274,25 @@ func ensureSandboxParentDirs(args *[]string, seen map[string]struct{}, path stri
 		*args = append(*args, "--dir", current)
 		seen[current] = struct{}{}
 	}
+}
+
+func parseDbusSocketPath(address string) string {
+	for _, candidate := range strings.Split(address, ";") {
+		candidate = strings.TrimSpace(candidate)
+		if !strings.HasPrefix(candidate, "unix:") {
+			continue
+		}
+
+		for _, param := range strings.Split(strings.TrimPrefix(candidate, "unix:"), ",") {
+			key, value, ok := strings.Cut(strings.TrimSpace(param), "=")
+			if !ok {
+				continue
+			}
+			if key == "path" && value != "" {
+				return value
+			}
+		}
+	}
+
+	return ""
 }
