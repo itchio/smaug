@@ -41,7 +41,10 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 	username = existingCreds.Username
 	if username != "" {
 		consumer.Opf("Trying to salvage existing account (%s)....", username)
-		password = generatePassword()
+		password, err = generatePassword()
+		if err != nil {
+			return fmt.Errorf("generating password: %w", err)
+		}
 		err = winox.ForceSetPassword(username, password)
 		if err != nil {
 			consumer.Warnf("Could not force password: %+v", err)
@@ -55,7 +58,10 @@ func (i *instance) Setup(consumer *state.Consumer) error {
 		username = fmt.Sprintf("itch-player-%x", time.Now().Unix())
 		consumer.Opf("Generated username (%s)", username)
 
-		password = generatePassword()
+		password, err = generatePassword()
+		if err != nil {
+			return fmt.Errorf("generating password: %w", err)
+		}
 		consumer.Opf("Generated password (%s)", password)
 
 		comment := "itch.io sandbox user"

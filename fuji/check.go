@@ -35,9 +35,12 @@ func (i *instance) Check(consumer *state.Consumer) error {
 				// Some Windows versions (10 for example) expire password automatically.
 				// Thankfully, we can renew it without administrator access, simply by using the old one.
 				consumer.Opf("Password has expired, setting new password...")
-				newPassword := generatePassword()
+				newPassword, err := generatePassword()
+				if err != nil {
+					return fmt.Errorf("generating new password: %w", err)
+				}
 
-				err := syscallex.NetUserChangePassword(
+				err = syscallex.NetUserChangePassword(
 					nil, // domainname
 					syscall.StringToUTF16Ptr(creds.Username),
 					syscall.StringToUTF16Ptr(creds.Password),

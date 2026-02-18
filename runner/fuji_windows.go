@@ -48,6 +48,10 @@ func (wr *fujiRunner) Prepare() error {
 	if err != nil {
 		consumer.Warnf("Sandbox check failed: %s", err.Error())
 
+		if wr.params.FujiParams.PerformElevatedSetup == nil {
+			return fmt.Errorf("sandbox setup callback is not configured")
+		}
+
 		err := wr.params.FujiParams.PerformElevatedSetup()
 		if err != nil {
 			return err

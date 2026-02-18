@@ -3,10 +3,10 @@
 package fuji
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"fmt"
+	"math/big"
 	"strings"
-	"sync"
-	"time"
 )
 
 /** Letters used when generating a random password */
@@ -18,38 +18,47 @@ const kNumbers = "0123456789"
 /** Special characters used when generating a random password */
 const kSpecial = "!_?-.;+/()=&"
 
-func randomCharFromSet(prng *rand.Rand, set string) string {
-	index := prng.Intn(len(set))
-	return set[index : index+1]
+func randomCharFromSet(set string) (string, error) {
+	index, err := randomInt(len(set))
+	if err != nil {
+		return "", err
+	}
+	return set[index : index+1], nil
 }
 
-func generatePassword() string {
+func randomInt(max int) (int, error) {
+	if max <= 0 {
+		return 0, fmt.Errorf("max must be positive")
+	}
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		return 0, fmt.Errorf("could not generate secure random integer: %w", err)
+	}
+	return int(n.Int64()), nil
+}
+
+func generatePassword() (string, error) {
 	pwd := ""
-	prng := getPrng()
 
 	for i := 0; i < 16; i++ {
 		var token string
+		var err error
 		switch i % 4 {
 		case 0:
-			token = randomCharFromSet(prng, kLetters)
+			token, err = randomCharFromSet(kLetters)
 		case 1:
-			token = randomCharFromSet(prng, kNumbers)
+			token, err = randomCharFromSet(kNumbers)
 		case 2:
-			token = randomCharFromSet(prng, kSpecial)
+			token, err = randomCharFromSet(kSpecial)
 		case 3:
-			token = strings.ToUpper(randomCharFromSet(prng, kLetters))
+			var letter string
+			letter, err = randomCharFromSet(kLetters)
+			token = strings.ToUpper(letter)
+		}
+		if err != nil {
+			return "", err
 		}
 		pwd += token
 	}
-	return pwd
-}
-
-var _prng *rand.Rand
-var _initPrngOnce sync.Once
-
-func getPrng() *rand.Rand {
-	_initPrngOnce.Do(func() {
-		_prng = rand.New(rand.NewSource(time.Now().UnixNano()))
-	})
-	return _prng
+	return pwd, nil
 }

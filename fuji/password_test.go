@@ -13,7 +13,8 @@ func Test_GeneratePassword(t *testing.T) {
 	previousPasswords := make(map[string]bool)
 
 	for i := 0; i < 100; i++ {
-		pass := generatePassword()
+		pass, err := generatePassword()
+		assert.NoError(t, err)
 		assert.True(t, strings.ContainsAny(pass, kLetters), "password has letters")
 		assert.True(t, strings.ContainsAny(pass, kNumbers), "password has numbers")
 		assert.True(t, strings.ContainsAny(pass, kSpecial), "password has special characters")
