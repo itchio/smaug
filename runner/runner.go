@@ -52,6 +52,14 @@ const (
 	SandboxTypeFuji       SandboxType = "fuji"
 )
 
+type SandboxPolicyMode string
+
+const (
+	SandboxPolicyModeAuto     SandboxPolicyMode = ""
+	SandboxPolicyModeBalanced SandboxPolicyMode = "balanced"
+	SandboxPolicyModeLegacy   SandboxPolicyMode = "legacy"
+)
+
 type SandboxConfig struct {
 	// Which sandbox runner to use. Empty means auto-detect (default).
 	Type SandboxType
@@ -61,6 +69,12 @@ type SandboxConfig struct {
 
 	// Environment variable names to allow through from the host into the sandbox.
 	AllowEnv []string
+
+	// Sandbox policy mode for backends that support multiple policy variants.
+	// On macOS sandbox-exec:
+	// - "balanced" (default): hardened profile with compatibility safeguards
+	// - "legacy": broader compatibility-focused profile
+	PolicyMode SandboxPolicyMode
 }
 
 type FirejailParams struct {

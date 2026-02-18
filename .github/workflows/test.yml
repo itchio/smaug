@@ -18,3 +18,5 @@ jobs:
       - if: runner.os == 'Linux'
         run: sudo apt-get install -y bubblewrap
       - run: go test -v -race ./...
+      - if: runner.os == 'macOS'
+        run: go test -v -count=1 ./runner

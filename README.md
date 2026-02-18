@@ -31,6 +31,7 @@ Shared sandbox settings are configured through `RunnerParams.SandboxConfig`:
 - `Type`: explicit backend (`"bubblewrap"`, `"firejail"`, `"flatpak"`) or auto (`""`)
 - `NoNetwork`: disable network access for the selected backend
 - `AllowEnv`: additional environment variable names to pass through from the host
+- `PolicyMode`: backend-specific policy mode (currently used by macOS `sandbox-exec`)
 
 Sandbox backends:
 
@@ -50,7 +51,13 @@ Backend selection:
 
 ### macOS
 
-Uses Apple's `sandbox-exec` with a generated [Seatbelt](https://reverse.put.as/wp-content/uploads/2011/09/Apple-Sandbox-Guide-v1.0.pdf) (SBPL) policy. The policy defaults to deny, then grants access to the game's install folder, system libraries, fonts, audio, and networking. For app bundles, a temporary shim `.app` wrapper is created that invokes `sandbox-exec` inside the bundle structure so that macOS treats it as a proper application.
+Uses Apple's `sandbox-exec` with a generated [Seatbelt](https://reverse.put.as/wp-content/uploads/2011/09/Apple-Sandbox-Guide-v1.0.pdf) (SBPL) policy. The policy defaults to deny, then grants access to the game's install folder plus required runtime resources. `SandboxConfig.NoNetwork` is supported on macOS and removes network rules from the generated profile. Environment forwarding in sandbox mode follows a strict allowlist baseline (including itch launch vars) plus `SandboxConfig.AllowEnv`.
+
+For app bundles, a temporary shim `.app` wrapper is created that invokes `sandbox-exec` inside the bundle structure so that macOS treats it as a proper application.
+
+Policy rollout mode can be controlled with `RunnerParams.SandboxConfig.PolicyMode`:
+- `"balanced"` (default)
+- `"legacy"` (compatibility fallback)
 
 ### Windows
 
