@@ -278,7 +278,9 @@ func TestBubblewrapInstallBindComesAfterSandboxHomeBind(t *testing.T) {
 		return exec.Command("sh", "-c", "true")
 	}
 
-	installFolder := "/home/leafo/.config/kitch/apps/sample-evil-app 2"
+	// Use a writable test-local path: persistent HOME setup calls MkdirAll on installFolder/.itch/home.
+	// Hardcoded user-home paths can be unwritable on CI runners and would skip the bind under test.
+	installFolder := filepath.Join(t.TempDir(), "sample-evil-app 2")
 	homeTarget := "/home/leafo"
 	homeSource := filepath.Join(installFolder, ".itch", "home")
 
