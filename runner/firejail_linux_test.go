@@ -29,9 +29,9 @@ func newFirejailTestRunner(t *testing.T, noNetwork bool) *firejailRunner {
 	t.Helper()
 	return &firejailRunner{
 		params: RunnerParams{
-			Consumer: newFirejailTestConsumer(t),
-			Ctx:      context.Background(),
-			Name:     "test-game",
+			Consumer:       newFirejailTestConsumer(t),
+			Ctx:            context.Background(),
+			Name:           "test-game",
 			FullTargetPath: "/bin/true",
 			InstallFolder:  t.TempDir(),
 			TempDir:        t.TempDir(),
