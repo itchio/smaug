@@ -52,6 +52,10 @@ const SandboxExecTemplate = `
   (subpath "/usr/bin")
   (subpath "/bin")
   (subpath "/System/Library")
+
+  ;; Rosetta 2 translation (required for x86_64 binaries on Apple Silicon)
+  (subpath "/usr/libexec/rosetta")
+  (subpath "/Library/Apple/usr/libexec/oah")
   (subpath "/Library/Java/JavaVirtualMachines")
 
 {{if .LegacyCompatibility}}

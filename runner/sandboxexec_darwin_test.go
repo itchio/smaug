@@ -200,6 +200,29 @@ func TestWriteSandboxProfileEscapesInstallLocation(t *testing.T) {
 	assert.NotContains(t, profileText, installFolder)
 }
 
+func TestWriteSandboxProfileIncludesRosettaPaths(t *testing.T) {
+	installFolder := t.TempDir()
+	ser := &sandboxExecRunner{
+		params: RunnerParams{
+			Consumer:      newSandboxExecTestConsumer(t),
+			InstallFolder: installFolder,
+			SandboxConfig: SandboxConfig{
+				PolicyMode: "balanced",
+			},
+		},
+	}
+
+	require.NoError(t, ser.WriteSandboxProfile())
+
+	profilePath := filepath.Join(installFolder, ".itch", "isolate-app.sb")
+	profileBytes, err := os.ReadFile(profilePath)
+	require.NoError(t, err)
+	profileText := string(profileBytes)
+
+	assert.Contains(t, profileText, `(subpath "/usr/libexec/rosetta")`)
+	assert.Contains(t, profileText, `(subpath "/Library/Apple/usr/libexec/oah")`)
+}
+
 func TestCollectAllowedEnvDarwinParamsEmptyOverridesHostExtraKey(t *testing.T) {
 	got := collectAllowedEnvDarwin(
 		[]string{"SMAUG_EXTRA_ENV="},
