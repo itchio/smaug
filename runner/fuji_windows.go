@@ -3,9 +3,12 @@
 package runner
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/itchio/headway/state"
 	"github.com/itchio/ox/syscallex"
@@ -103,33 +106,59 @@ func (wr *fujiRunner) Run() error {
 
 	defer sp.Revoke(consumer)
 
-	cmd := execas.Command(params.FullTargetPath, params.Args...)
-	cmd.Username = creds.Username
-	cmd.Domain = "."
-	cmd.Password = creds.Password
-	cmd.Dir = params.Dir
-	cmd.Env = env
-	cmd.Stdout = params.Stdout
-	cmd.Stderr = params.Stderr
+	const maxStartAttempts = 7
+	const startRetryDelay = 1 * time.Second
 
-	var creationFlags uint32 = syscallex.CREATE_SUSPENDED
-	if params.Console {
-		// note: this will disable std{in,out,err} redirection
-		creationFlags |= syscallex.CREATE_NEW_CONSOLE
-	}
-	cmd.SysProcAttr = &syscallex.SysProcAttr{
-		CreationFlags: creationFlags,
-		LogonFlags:    syscallex.LOGON_WITH_PROFILE,
-	}
+	var cmd *execas.Cmd
+	var pg *processGroup
 
-	pg, err := NewProcessGroup(consumer, cmd, params.Ctx)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
+	for attempt := 1; attempt <= maxStartAttempts; attempt++ {
+		cmd = execas.Command(params.FullTargetPath, params.Args...)
+		cmd.Username = creds.Username
+		cmd.Domain = "."
+		cmd.Password = creds.Password
+		cmd.Dir = params.Dir
+		cmd.Env = env
+		cmd.Stdout = params.Stdout
+		cmd.Stderr = params.Stderr
 
-	err = cmd.Start()
-	if err != nil {
-		return fmt.Errorf("%w", err)
+		var creationFlags uint32 = syscallex.CREATE_SUSPENDED
+		if params.Console {
+			// note: this will disable std{in,out,err} redirection
+			creationFlags |= syscallex.CREATE_NEW_CONSOLE
+		}
+		cmd.SysProcAttr = &syscallex.SysProcAttr{
+			CreationFlags: creationFlags,
+			LogonFlags:    syscallex.LOGON_WITH_PROFILE,
+		}
+
+		pg, err = NewProcessGroup(consumer, cmd, params.Ctx)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		err = cmd.Start()
+		if err != nil {
+			// After granting ACL permissions, Windows may not have fully
+			// propagated them yet. Retry on access denied errors since the
+			// permissions will become effective shortly.
+			if errors.Is(err, os.ErrPermission) && attempt < maxStartAttempts {
+				consumer.Warnf("Access denied on attempt %d/%d, retrying in %v...", attempt, maxStartAttempts, startRetryDelay)
+				if params.Ctx != nil {
+					select {
+					case <-time.After(startRetryDelay):
+					case <-params.Ctx.Done():
+						return fmt.Errorf("%w", params.Ctx.Err())
+					}
+				} else {
+					time.Sleep(startRetryDelay)
+				}
+				continue
+			}
+			return fmt.Errorf("%w", err)
+		}
+
+		break
 	}
 
 	err = pg.AfterStart()
