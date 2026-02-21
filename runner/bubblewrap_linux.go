@@ -280,7 +280,7 @@ func ensureSandboxParentDirs(args *[]string, seen map[string]struct{}, path stri
 	}
 
 	current := "/"
-	for _, part := range strings.Split(strings.TrimPrefix(parent, "/"), "/") {
+	for part := range strings.SplitSeq(strings.TrimPrefix(parent, "/"), "/") {
 		if part == "" {
 			continue
 		}
@@ -294,13 +294,13 @@ func ensureSandboxParentDirs(args *[]string, seen map[string]struct{}, path stri
 }
 
 func parseDbusSocketPath(address string) string {
-	for _, candidate := range strings.Split(address, ";") {
+	for candidate := range strings.SplitSeq(address, ";") {
 		candidate = strings.TrimSpace(candidate)
 		if !strings.HasPrefix(candidate, "unix:") {
 			continue
 		}
 
-		for _, param := range strings.Split(strings.TrimPrefix(candidate, "unix:"), ",") {
+		for param := range strings.SplitSeq(strings.TrimPrefix(candidate, "unix:"), ",") {
 			key, value, ok := strings.Cut(strings.TrimSpace(param), "=")
 			if !ok {
 				continue

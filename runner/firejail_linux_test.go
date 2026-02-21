@@ -45,7 +45,7 @@ func newFirejailTestRunner(t *testing.T, noNetwork bool) *firejailRunner {
 
 func parseEnvironmentOutput(output string) map[string]string {
 	out := make(map[string]string)
-	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(output), "\n") {
 		if line == "" {
 			continue
 		}
