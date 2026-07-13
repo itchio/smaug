@@ -35,11 +35,10 @@ type RunnerParams struct {
 
 	// runner-specific params
 
-	FirejailParams     FirejailParams
-	BubblewrapParams   BubblewrapParams
-	FlatpakSpawnParams FlatpakSpawnParams
-	FujiParams         FujiParams
-	AttachParams       AttachParams
+	FirejailParams   FirejailParams
+	BubblewrapParams BubblewrapParams
+	FujiParams       FujiParams
+	AttachParams     AttachParams
 }
 
 type SandboxType string
@@ -48,7 +47,6 @@ const (
 	SandboxTypeAuto       SandboxType = ""
 	SandboxTypeBubblewrap SandboxType = "bubblewrap"
 	SandboxTypeFirejail   SandboxType = "firejail"
-	SandboxTypeFlatpak    SandboxType = "flatpak"
 	SandboxTypeFuji       SandboxType = "fuji"
 )
 
@@ -83,9 +81,6 @@ type FirejailParams struct {
 
 type BubblewrapParams struct {
 	BinaryPath string
-}
-
-type FlatpakSpawnParams struct {
 }
 
 type FujiParams struct {
@@ -128,9 +123,6 @@ func GetRunner(params RunnerParams) (Runner, error) {
 		if params.Sandbox {
 			switch params.SandboxConfig.Type {
 			case SandboxTypeAuto:
-				if isInsideFlatpak() {
-					return newFlatpakSpawnRunner(params)
-				}
 				if params.BubblewrapParams.BinaryPath != "" {
 					return newBubblewrapRunner(params)
 				}
@@ -139,8 +131,6 @@ func GetRunner(params RunnerParams) (Runner, error) {
 				return newBubblewrapRunner(params)
 			case SandboxTypeFirejail:
 				return newFirejailRunner(params)
-			case SandboxTypeFlatpak:
-				return newFlatpakSpawnRunner(params)
 			default:
 				return nil, fmt.Errorf("sandbox type %q is not supported on linux", params.SandboxConfig.Type)
 			}
