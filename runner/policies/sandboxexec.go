@@ -17,6 +17,10 @@ const SandboxExecTemplate = `
   (subpath "{{.UserLibrary}}/KeyBindings")
   (subpath "{{.UserLibrary}}/Saved Application State")
 
+  ;; Ren'Py games save to ~/Library/RenPy/<game_name> by default
+  ;; https://github.com/itchio/smaug/issues/7
+  (subpath "{{.UserLibrary}}/RenPy")
+
 {{if .LegacyCompatibility}}
   ;; Legacy mode keeps broad device access for compatibility.
   (subpath "/dev")

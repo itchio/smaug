@@ -150,6 +150,7 @@ func TestWriteSandboxProfileNoNetworkOmitsNetworkRulesInBalancedMode(t *testing.
 	assert.NotContains(t, profileText, `(subpath "/private")`)
 	assert.NotContains(t, profileText, `(subpath "/dev")`)
 	assert.Contains(t, profileText, `(literal "/dev/null")`)
+	assert.Contains(t, profileText, `Library/RenPy")`)
 }
 
 func TestWriteSandboxProfileLegacyModeKeepsLegacyCompatibilityRules(t *testing.T) {
