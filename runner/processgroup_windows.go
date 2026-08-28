@@ -11,6 +11,7 @@ import (
 	"github.com/itchio/headway/state"
 	"github.com/itchio/ox/syscallex"
 	"github.com/itchio/ox/winox/execas"
+	"golang.org/x/sys/windows"
 )
 
 const magicCompletionKey uint32 = 0xf00d
@@ -108,7 +109,12 @@ func (pg *processGroup) tryAssignJobObject() error {
 }
 
 func (pg *processGroup) Wait() error {
-	waitDone := make(chan error)
+	waitDone := make(chan error, 1)
+
+	// SysProcAttr's process handle is separate from the one os.Process
+	// manages, so it won't be closed for us.
+	defer syscall.CloseHandle(pg.cmd.SysProcAttr.ProcessHandle)
+
 	go func() {
 		if pg.jobObject == syscall.InvalidHandle {
 			pg.consumer.Infof("Waiting on single process...")
@@ -141,57 +147,34 @@ func (pg *processGroup) Wait() error {
 			pg.consumer.Infof("Killing single process %d", pid)
 			// Use terminateProcess instead of cmd.Process.Kill() because
 			// the os.Process handle from os.FindProcess lacks PROCESS_TERMINATE.
-			terminateProcess(pid, 1)
-		} else {
-			pg.consumer.Infof("Attempting to kill entire job object...")
-			var processIdList syscallex.JobObjectBasicProcessIdList
-			processIdListPtr := uintptr(unsafe.Pointer(&processIdList))
-			processIdListSize := unsafe.Sizeof(processIdList)
-
-			pg.consumer.Infof("Querying job object...")
-			err := syscallex.QueryInformationJobObject(
-				pg.jobObject,
-				syscallex.JobObjectInfoClass_JobObjectBasicProcessIdList,
-				processIdListPtr,
-				processIdListSize,
-				0,
-			)
+			err := terminateProcess(pid, 1)
 			if err != nil {
-				pg.consumer.Infof("Querying job object error (!)")
-				ignoreError := false
-				if en, ok := err.(syscall.Errno); ok {
-					if en == syscall.ERROR_MORE_DATA {
-						// that's expected, the struct we pass has only room for 1 process
-						ignoreError = true
-					}
+				// ERROR_ACCESS_DENIED here usually means the process already
+				// exited on its own, but waiting on waitDone with it still
+				// alive would block forever, so require a confirmed exit.
+				event, waitErr := syscall.WaitForSingleObject(pg.cmd.SysProcAttr.ProcessHandle, 0)
+				if waitErr != nil || event != syscall.WAIT_OBJECT_0 {
+					return fmt.Errorf("terminating process %d: %w", pid, err)
 				}
-
-				if !ignoreError {
-					return fmt.Errorf("%w", err)
-				}
+				pg.consumer.Infof("Process %d already exited", pid)
 			}
-
-			pg.consumer.Infof("%d processes still in job object", processIdList.NumberOfAssignedProcesses)
-			pg.consumer.Infof("%d processes in our list", processIdList.NumberOfProcessIdsInList)
-			for i := uint32(0); i < processIdList.NumberOfProcessIdsInList; i++ {
-				pid := uint32(processIdList.ProcessIdList[i])
-				pg.consumer.Infof("- PID %d", pid)
-				err := terminateProcess(pid, 0)
-				if err != nil {
-					pg.consumer.Warnf("Could not kill pid %d: %s", pid, err.Error())
-				}
+		} else {
+			pg.consumer.Infof("Killing all processes in job object...")
+			err := windows.TerminateJobObject(windows.Handle(pg.jobObject), 1)
+			if err != nil {
+				return fmt.Errorf("terminating job object: %w", err)
 			}
 		}
+
+		// Don't report the launch as ended until the processes are actually
+		// gone. The exit error caused by termination is expected, so drop it.
+		<-waitDone
 	case err := <-waitDone:
 		pg.consumer.Infof("Wait done")
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 	}
-
-	// Close the raw process handle stored in SysProcAttr. This is a separate
-	// handle from the one managed by os.Process and must be closed explicitly.
-	syscall.CloseHandle(pg.cmd.SysProcAttr.ProcessHandle)
 
 	return nil
 }
