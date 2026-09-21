@@ -154,7 +154,14 @@ func RunAppBundle(params RunnerParams, bundlePath string) error {
 		}
 	}()
 
-	err = cmd.Run()
+	err = cmd.Start()
+	if err != nil {
+		close(processDone)
+		return fmt.Errorf("%w", err)
+	}
+	params.started(cmd.Process.Pid)
+
+	err = cmd.Wait()
 	close(processDone)
 	if err != nil {
 		return fmt.Errorf("%w", err)

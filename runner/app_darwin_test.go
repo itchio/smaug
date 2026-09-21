@@ -92,6 +92,35 @@ func TestRunAppBundleCancellationKillsOnlyNewPIDs(t *testing.T) {
 	assert.Equal(t, []string{"30", "40"}, killed)
 }
 
+func TestRunAppBundleReportsOpenOnStart(t *testing.T) {
+	origPgrep := pgrepCommand
+	origOpen := openCommand
+	t.Cleanup(func() {
+		pgrepCommand = origPgrep
+		openCommand = origOpen
+	})
+
+	pgrepCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "printf '10\n20\n'")
+	}
+	openCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "sleep 0.2")
+	}
+
+	var started []int
+	err := RunAppBundle(
+		RunnerParams{
+			Consumer: newSandboxExecTestConsumer(t),
+			Ctx:      context.Background(),
+			OnStart:  func(pid int) { started = append(started, pid) },
+		},
+		writeTestAppBundle(t),
+	)
+	require.NoError(t, err)
+	require.Len(t, started, 1)
+	assert.NotZero(t, started[0])
+}
+
 func TestDiffPIDsIsSortedAndExcludesExisting(t *testing.T) {
 	after := map[int]struct{}{
 		30: {},

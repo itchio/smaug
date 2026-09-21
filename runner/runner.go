@@ -27,6 +27,14 @@ type RunnerParams struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
+	// Called once, right after the runner's process starts, with its pid:
+	// the game's, or the wrapper's around it (a sandbox, or `open` for a
+	// macOS bundle). Started is all it means; the pid may be gone by the
+	// time anything is done with it. Run blocks until exit, so this is
+	// the only way a caller learns the pid while it matters. It runs on
+	// the runner's goroutine and should return promptly.
+	OnStart func(pid int)
+
 	InstallFolder string
 	TempDir       string
 	Runtime       ox.Runtime
@@ -39,6 +47,12 @@ type RunnerParams struct {
 	BubblewrapParams BubblewrapParams
 	FujiParams       FujiParams
 	AttachParams     AttachParams
+}
+
+func (params RunnerParams) started(pid int) {
+	if params.OnStart != nil {
+		params.OnStart(pid)
+	}
 }
 
 type SandboxType string

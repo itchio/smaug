@@ -179,6 +179,7 @@ func (ar *attachRunner) Run() error {
 	defer winox.SafeRelease(uintptr(processHandle))
 
 	consumer.Infof("Attached to PID (%d)", ar.pid)
+	ar.params.started(int(ar.pid))
 	_, err = syscall.WaitForSingleObject(processHandle, syscall.INFINITE)
 	if err != nil {
 		return fmt.Errorf("%w", err)

@@ -49,6 +49,7 @@ func (sr *simpleRunner) Run() error {
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
+	params.started(pg.cmd.Process.Pid)
 
 	err = pg.Wait()
 	if err != nil {
