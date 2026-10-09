@@ -125,6 +125,78 @@ func TestSandboxExecRunNakedExecutableUsesSandboxExecBinaryAndFilteredEnv(t *tes
 	assert.False(t, hasSecret, "non-allowlisted variable should not be forwarded")
 }
 
+func TestSandboxExecPrepareWithHostSandboxExec(t *testing.T) {
+	if _, err := exec.LookPath("sandbox-exec"); err != nil {
+		t.Skip("sandbox-exec not available on this host")
+	}
+
+	installFolder := t.TempDir()
+	targetPath := filepath.Join(installFolder, "test-game")
+	require.NoError(t, os.WriteFile(targetPath, []byte{0xfe, 0xed, 0xfa, 0xcf}, 0755))
+
+	params := RunnerParams{
+		Consumer:       newSandboxExecTestConsumer(t),
+		Ctx:            context.Background(),
+		InstallFolder:  installFolder,
+		FullTargetPath: targetPath,
+		SandboxConfig: SandboxConfig{
+			PolicyMode: "balanced",
+		},
+	}
+
+	r, err := newSandboxExecRunner(params)
+	require.NoError(t, err)
+
+	require.NoError(t, r.Prepare())
+}
+
+func TestSandboxExecPrepareFailsWhenSandboxVerificationFails(t *testing.T) {
+	origLookPath := sandboxExecLookPath
+	origCommand := sandboxExecCommand
+	t.Cleanup(func() {
+		sandboxExecLookPath = origLookPath
+		sandboxExecCommand = origCommand
+	})
+
+	installFolder := t.TempDir()
+	targetPath := filepath.Join(installFolder, "test-game")
+	require.NoError(t, os.WriteFile(targetPath, []byte{0xfe, 0xed, 0xfa, 0xcf}, 0755))
+
+	sandboxExecLookPath = func(file string) (string, error) {
+		return "/usr/bin/sandbox-exec", nil
+	}
+	sandboxExecCommand = func(name string, args ...string) *exec.Cmd {
+		return exec.Command("sh", "-c", "exit 1")
+	}
+
+	var warnedMessages []string
+	consumer := &state.Consumer{
+		OnMessage: func(lvl string, msg string) {
+			if lvl == "warning" {
+				warnedMessages = append(warnedMessages, msg)
+			}
+		},
+	}
+
+	params := RunnerParams{
+		Consumer:       consumer,
+		Ctx:            context.Background(),
+		InstallFolder:  installFolder,
+		FullTargetPath: targetPath,
+		SandboxConfig: SandboxConfig{
+			PolicyMode: "balanced",
+		},
+	}
+
+	r, err := newSandboxExecRunner(params)
+	require.NoError(t, err)
+
+	err = r.Prepare()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Cannot set up itch.io sandbox")
+	assert.Contains(t, strings.Join(warnedMessages, "\n"), "While verifying sandbox-exec")
+}
+
 func TestWriteSandboxProfileNoNetworkOmitsNetworkRulesInBalancedMode(t *testing.T) {
 	installFolder := t.TempDir()
 	ser := &sandboxExecRunner{
