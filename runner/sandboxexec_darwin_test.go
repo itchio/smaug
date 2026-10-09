@@ -63,13 +63,17 @@ func TestSandboxExecRunNakedExecutableUsesSandboxExecBinaryAndFilteredEnv(t *tes
 
 	t.Setenv("SMAUG_ALLOW_ENV_HOST_ONLY", "host-value")
 
+	installFolder := t.TempDir()
+	targetPath := filepath.Join(installFolder, "test-game")
+	require.NoError(t, os.WriteFile(targetPath, []byte{0xfe, 0xed, 0xfa, 0xcf}, 0755))
+
 	sandboxExecLookPath = func(file string) (string, error) {
 		require.Equal(t, "sandbox-exec", file)
 		return "/fake/sandbox-exec", nil
 	}
 	sandboxExecCommand = func(name string, args ...string) *exec.Cmd {
 		require.Equal(t, "/fake/sandbox-exec", name)
-		require.Equal(t, []string{"-n", "no-network", "true"}, args)
+		require.Equal(t, []string{"-f", filepath.Join(installFolder, ".itch", "isolate-app.sb"), "true"}, args)
 		return exec.Command("sh", "-c", "true")
 	}
 
@@ -79,10 +83,6 @@ func TestSandboxExecRunNakedExecutableUsesSandboxExecBinaryAndFilteredEnv(t *tes
 		capturedParams = params
 		return fakeRunner, nil
 	}
-
-	installFolder := t.TempDir()
-	targetPath := filepath.Join(installFolder, "test-game")
-	require.NoError(t, os.WriteFile(targetPath, []byte{0xfe, 0xed, 0xfa, 0xcf}, 0755))
 
 	params := RunnerParams{
 		Consumer:       newSandboxExecTestConsumer(t),
