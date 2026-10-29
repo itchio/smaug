@@ -71,8 +71,14 @@ func (ser *sandboxExecRunner) Prepare() error {
 	}
 	ser.sandboxExecPath = sandboxExecPath
 
-	// make sure sandbox-exec is runnable
-	cmd := sandboxExecCommand(ser.sandboxExecPath, "-n", "no-network", "true")
+	err = ser.WriteSandboxProfile()
+	if err != nil {
+		consumer.Warnf("While writing sandbox profile: %s", err.Error())
+		return errors.New("Cannot set up itch.io sandbox, see logs for details")
+	}
+
+	// make sure sandbox-exec is runnable with the generated profile
+	cmd := sandboxExecCommand(ser.sandboxExecPath, "-f", ser.SandboxProfilePath(), "true")
 	err = cmd.Run()
 	if err != nil {
 		consumer.Warnf("While verifying sandbox-exec: %s", err.Error())
@@ -172,11 +178,6 @@ func (ser *sandboxExecRunner) Run() error {
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
-	}
-
-	err := ser.WriteSandboxProfile()
-	if err != nil {
-		return fmt.Errorf("%w", err)
 	}
 
 	sandboxEnv := collectAllowedEnvDarwin(params.Env, os.Environ(), params.SandboxConfig.AllowEnv)
