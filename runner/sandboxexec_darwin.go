@@ -79,9 +79,12 @@ func (ser *sandboxExecRunner) Prepare() error {
 
 	// make sure sandbox-exec is runnable with the generated profile
 	cmd := sandboxExecCommand(ser.sandboxExecPath, "-f", ser.SandboxProfilePath(), "true")
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		consumer.Warnf("While verifying sandbox-exec: %s", err.Error())
+		if trimmed := strings.TrimSpace(string(output)); trimmed != "" {
+			consumer.Warnf("sandbox-exec output: %s", trimmed)
+		}
 		return errors.New("Cannot set up itch.io sandbox, see logs for details")
 	}
 

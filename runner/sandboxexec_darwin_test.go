@@ -166,7 +166,7 @@ func TestSandboxExecPrepareFailsWhenSandboxVerificationFails(t *testing.T) {
 		return "/usr/bin/sandbox-exec", nil
 	}
 	sandboxExecCommand = func(name string, args ...string) *exec.Cmd {
-		return exec.Command("sh", "-c", "exit 1")
+		return exec.Command("sh", "-c", "echo \"sandbox-exec: invalid profile\" >&2; exit 1")
 	}
 
 	var warnedMessages []string
@@ -195,6 +195,7 @@ func TestSandboxExecPrepareFailsWhenSandboxVerificationFails(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "Cannot set up itch.io sandbox")
 	assert.Contains(t, strings.Join(warnedMessages, "\n"), "While verifying sandbox-exec")
+	assert.Contains(t, strings.Join(warnedMessages, "\n"), "sandbox-exec: invalid profile")
 }
 
 func TestWriteSandboxProfileNoNetworkOmitsNetworkRulesInBalancedMode(t *testing.T) {
